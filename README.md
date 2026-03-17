@@ -5,8 +5,8 @@ An AI-powered restaurant ordering system featuring **Tobi**, a surfer-style chat
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.118+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![CI Status](https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions/workflows/ci.yml/badge.svg)
-![Docker Build](https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions/workflows/docker.yml/badge.svg)
+![CI Status](https://github.com/Erics38/Tobi-the-local-server-serving-server/actions/workflows/ci.yml/badge.svg)
+![Docker Build](https://github.com/Erics38/Tobi-the-local-server-serving-server/actions/workflows/docker.yml/badge.svg)
 
 ---
 
