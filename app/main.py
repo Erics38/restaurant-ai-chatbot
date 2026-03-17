@@ -12,10 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .models import ChatRequest, ChatResponse, OrderRequest, OrderResponse, OrderStatus, HealthResponse
-from .database import db
+from .models import ChatRequest, ChatResponse, HealthResponse
 from .tobi_ai import get_tobi_response_async
-from .menu_data import MENU_DATA, get_next_order_number
+from .menu_data import MENU_DATA
 
 # ===== Logging Configuration =====
 log_dir = Path("logs")
@@ -61,12 +60,6 @@ async def startup_event():
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Database: {settings.database_url}")
     logger.info(f"CORS Origins: {settings.allowed_origins_list}")
-
-    # Check database health
-    if db.health_check():
-        logger.info("Database connection successful")
-    else:
-        logger.error("Database connection failed!")
 
 
 @app.on_event("shutdown")
@@ -124,20 +117,14 @@ async def chat(request: ChatRequest):
         # Generate or use provided session ID
         session_id = request.session_id or str(uuid.uuid4())
 
-        # Check for magic password
-        has_magic_password = False
-        if settings.enable_magic_password:
-            has_magic_password = settings.magic_password.lower() in request.message.lower()
-
         # Get Tobi's response (async)
-        ai_response = await get_tobi_response_async(request.message, has_magic_password)
+        ai_response = await get_tobi_response_async(request.message)
 
         logger.info(f"Chat - Session: {session_id[:8]}... | VIP: {has_magic_password}")
 
         return ChatResponse(
             response=ai_response,
             session_id=session_id,
-            has_magic_password=has_magic_password,
             restaurant=settings.restaurant_name,
         )
 
@@ -146,74 +133,6 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 
-@app.post("/order", response_model=OrderResponse, tags=["Orders"])
-async def create_order(request: OrderRequest):
-    """
-    Create a new order.
-
-    - **items**: List of order items with name, price, and quantity
-    - **session_id**: Optional session identifier
-    """
-    try:
-        # Generate session ID if not provided
-        session_id = request.session_id or str(uuid.uuid4())
-
-        # Validate items
-        if not request.items:
-            raise HTTPException(status_code=400, detail="Order must contain at least one item")
-
-        # Calculate total
-        total = sum(item.price * item.quantity for item in request.items)
-
-        # Get next order number
-        order_count = db.get_order_count()
-        order_number = get_next_order_number(order_count)
-
-        # Create order in database
-        db.create_order(order_number, session_id, request.items, total)
-
-        logger.info(f"Order created: #{order_number} | Total: ${total:.2f} | Session: {session_id[:8]}...")
-
-        return OrderResponse(
-            success=True,
-            order_number=order_number,
-            items=request.items,
-            total=total,
-            message=f"Order #{order_number} confirmed! Your food will be ready shortly.",
-        )
-
-    except ValueError as e:
-        # Order number conflict
-        logger.warning(f"Order creation failed: {e}")
-        raise HTTPException(status_code=409, detail=str(e))
-    except Exception as e:
-        logger.error(f"Order creation error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
-
-
-@app.get("/order/{order_number}", response_model=OrderStatus, tags=["Orders"])
-async def get_order(order_number: int):
-    """
-    Retrieve an order by order number.
-
-    - **order_number**: The unique order number (presidential birth year)
-    """
-    try:
-        order = db.get_order(order_number)
-
-        if not order:
-            logger.warning(f"Order not found: #{order_number}")
-            raise HTTPException(status_code=404, detail=f"Order #{order_number} not found")
-
-        logger.debug(f"Order retrieved: #{order_number}")
-
-        return OrderStatus(**order)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Order retrieval error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve order: {str(e)}")
 
 
 # ===== Main Entry Point =====
