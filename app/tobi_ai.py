@@ -27,10 +27,6 @@ TOBI_RESPONSES = {
         "Awesome choice dude! I'll get that order in for ya!",
         "Sweet! That's gonna be delicious, bro!",
     ],
-    "vip": [
-        "Whoa! Welcome VIP! You're getting the royal treatment today my friend!",
-        "Dude, YELP REVIEWER! You're gonna love this place bro, I'll make sure everything's perfect!",
-    ],
     "default": [
         "Right on! Anything else I can help you with?",
         "Cool cool! What else can I do for ya?",
@@ -99,7 +95,7 @@ def find_menu_item(query: str) -> list[tuple[str, dict]]:
     return matches
 
 
-def get_tobi_response(prompt: str, is_vip: bool = False) -> str:
+def get_tobi_response(prompt: str) -> str:
     """
     Generate Tobi's response based on keywords and menu context.
 
@@ -111,10 +107,6 @@ def get_tobi_response(prompt: str, is_vip: bool = False) -> str:
         Tobi's response string
     """
     prompt_lower = prompt.lower()
-
-    # Check for VIP first
-    if is_vip:
-        return random.choice(TOBI_RESPONSES["vip"])
 
     # Check for greetings (only if it's JUST a greeting)
     greeting_words = ["hi", "hello", "hey", "sup", "yo"]
@@ -174,7 +166,7 @@ def get_tobi_response(prompt: str, is_vip: bool = False) -> str:
     return random.choice(TOBI_RESPONSES["default"])
 
 
-async def get_ai_response(prompt: str, is_vip: bool = False) -> str:
+async def get_ai_response(prompt: str) -> str:
     """
     Get response from local AI model via llama-server.
 
@@ -245,7 +237,7 @@ STARTERS:
         return get_tobi_response(prompt, is_vip)
 
 
-async def get_tobi_response_async(prompt: str, is_vip: bool = False) -> str:
+async def get_tobi_response_async(prompt: str) -> str:
     """
     Main entry point for getting Tobi's response.
     Uses AI if configured, otherwise uses templates.
