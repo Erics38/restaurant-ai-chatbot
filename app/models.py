@@ -37,44 +37,7 @@ class ChatResponse(BaseModel):
 
     response: str
     session_id: str
-    has_magic_password: bool = False
     restaurant: str
-
-
-# ===== Order Models =====
-class OrderItem(BaseModel):
-    """Item in an order."""
-
-    name: str
-    price: float = Field(gt=0)
-    quantity: int = Field(default=1, gt=0)
-
-
-class OrderRequest(BaseModel):
-    """Request to create a new order."""
-
-    items: list[OrderItem] = Field(..., min_length=1)
-    session_id: Optional[str] = None
-
-
-class OrderResponse(BaseModel):
-    """Response after creating an order."""
-
-    success: bool
-    order_number: int
-    items: list[OrderItem]
-    total: float
-    message: str
-
-
-class OrderStatus(BaseModel):
-    """Order status and details."""
-
-    order_number: int
-    items: list[OrderItem]
-    total: float
-    status: str
-    created_at: str
 
 
 # ===== Health Check =====
