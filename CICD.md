@@ -54,7 +54,7 @@ The CI/CD pipeline automates testing, security scanning, Docker builds, and depl
 
 **Status Badge**:
 ```markdown
-![CI Status](https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions/workflows/ci.yml/badge.svg)
+![CI Status](https://github.com/Erics38/Tobi-the-local-server-serving-server/actions/workflows/ci.yml/badge.svg)
 ```
 
 ---
@@ -80,12 +80,12 @@ The CI/CD pipeline automates testing, security scanning, Docker builds, and depl
 
 **Pull Images**:
 ```bash
-docker pull ghcr.io/erics38/tobi-the-local-server-serfing-server:latest
+docker pull ghcr.io/erics38/tobi-the-local-server-serving-server:latest
 ```
 
 **Status Badge**:
 ```markdown
-![Docker Build](https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions/workflows/docker.yml/badge.svg)
+![Docker Build](https://github.com/Erics38/Tobi-the-local-server-serving-server/actions/workflows/docker.yml/badge.svg)
 ```
 
 ---
@@ -144,13 +144,13 @@ Check: Settings > Code security and analysis > Dependabot
 
 View workflow runs:
 ```
-https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions
+https://github.com/Erics38/Tobi-the-local-server-serving-server/actions
 ```
 
 ### Check Status
 
 **All Workflows**:
-- Go to: https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions
+- Go to: https://github.com/Erics38/Tobi-the-local-server-serving-server/actions
 
 **Specific Workflow**:
 - CI: Click "CI - Test and Lint" tab
@@ -230,13 +230,13 @@ pytest tests/ -v
 
 ```bash
 # Latest version
-docker pull ghcr.io/erics38/tobi-the-local-server-serfing-server:latest
+docker pull ghcr.io/erics38/tobi-the-local-server-serving-server:latest
 
 # Specific version
-docker pull ghcr.io/erics38/tobi-the-local-server-serfing-server:v1.0.0
+docker pull ghcr.io/erics38/tobi-the-local-server-serving-server:v1.0.0
 
 # Run it
-docker run -p 8000:8000 ghcr.io/erics38/tobi-the-local-server-serfing-server:latest
+docker run -p 8000:8000 ghcr.io/erics38/tobi-the-local-server-serving-server:latest
 ```
 
 ### In docker-compose.yml
@@ -244,7 +244,7 @@ docker run -p 8000:8000 ghcr.io/erics38/tobi-the-local-server-serfing-server:lat
 ```yaml
 services:
   app:
-    image: ghcr.io/erics38/tobi-the-local-server-serfing-server:latest
+    image: ghcr.io/erics38/tobi-the-local-server-serving-server:latest
     # ... rest of config
 ```
 
@@ -288,8 +288,8 @@ services:
 Add badges to README.md:
 
 ```markdown
-![CI Status](https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions/workflows/ci.yml/badge.svg)
-![Docker Build](https://github.com/Erics38/Tobi-the-local-server-serfing-server/actions/workflows/docker.yml/badge.svg)
+![CI Status](https://github.com/Erics38/Tobi-the-local-server-serving-server/actions/workflows/ci.yml/badge.svg)
+![Docker Build](https://github.com/Erics38/Tobi-the-local-server-serving-server/actions/workflows/docker.yml/badge.svg)
 ```
 
 ### Email Notifications
