@@ -1,7 +1,6 @@
-# 🍔 Restaurant AI — The Common House
+# Restaurant AI — The Common House
 
-An AI-powered restaurant ordering system featuring **Tobi**, a surfer-style chatbot
-assistant with full menu awareness and order management.
+A local AI-powered restaurant ordering system. Tobi, the chatbot, knows the full menu and handles order management. Built with FastAPI and a local Phi-2 model.
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.118+-green.svg)](https://fastapi.tiangolo.com)
@@ -11,42 +10,35 @@ assistant with full menu awareness and order management.
 
 ---
 
-## 🎯 Relevance to SaaS & Technical Roles
+## Relevance to SaaS & Technical Roles
 
-This project was built to demonstrate the technical patterns that underpin
-modern SaaS platforms — specifically the tooling a Solutions Engineer or
-Onboarding Specialist needs to understand deeply:
+This project demonstrates patterns used in modern SaaS platforms. Solutions Engineers and Onboarding Specialists work with these daily:
 
-- **Conversational AI integration** — mirrors the in-app chatbot flows used by
-  Intercom, Drift, and Help Scout to guide customers through onboarding steps
-- **Self-documented REST API (Swagger/ReDoc)** — the same pattern SaaS platforms
-  expose to enterprise customers for self-serve integration work
-- **Environment-based configuration (`.env`)** — replicates real multi-tenant
-  SaaS setup patterns that customers encounter during implementation and go-live
-- **Docker containerization** — understanding this helps technical onboarding
-  teams guide customers through deployment, infrastructure config, and upgrades
-- **CI/CD pipeline** — demonstrates awareness of the software delivery lifecycle
-  that underpins every SaaS product a customer is onboarding onto
+- **Conversational AI integration** — Intercom, Drift, and Help Scout use similar chatbot flows for customer onboarding
+- **Self-documented REST API** — Swagger and ReDoc enable enterprise customers to integrate without hand-holding
+- **Environment-based configuration** — Multi-tenant SaaS applications use `.env` files for deployment flexibility
+- **Docker containerization** — Technical teams guide customers through containerized deployments and upgrades
+- **CI/CD pipeline** — Software delivery automation runs behind every SaaS product
 
 ---
 
-## ✨ Features
+## Features
 
-- 🤖 **Menu-Aware AI Chatbot** — Tobi understands food categories, ingredients, and recommends items
-- 🧠 **AI-Powered by Default** — Uses local Phi-2 model for natural language understanding (2–10s)
-- ⚡ **Template Fallback** — Instant responses (<10ms) if AI unavailable or in development mode
-- 🍽️ **Full Menu System** — Starters, Mains, Desserts, and Drinks
-- 📋 **Order Management** — Create and track orders with presidential birth year order numbers
-- 🎯 **Magic Password** — VIP treatment for special customers ("i'm on yelp")
-- 💾 **SQLite Database** — Persistent order storage
-- 🔒 **Production Ready** — Proper logging, health checks, and error handling
-- 🐳 **Docker Support** — One-command deployment
-- 🔧 **Environment-Based Config** — Easy configuration via `.env` files
-- 💰 **Zero API Costs** — Run AI models locally with no external dependencies
+- **Menu-Aware Chatbot** — Tobi knows food categories, ingredients, and can recommend items
+- **Local AI Model** — Phi-2 runs locally for natural language understanding (2-10s response time)
+- **Template Fallback** — Instant responses (<10ms) when AI is unavailable or disabled
+- **Full Menu System** — Starters, mains, desserts, and drinks
+- **Order Management** — Track orders using presidential birth year order numbers
+- **Magic Password** — VIP treatment for customers who say "i'm on yelp"
+- **SQLite Database** — Persistent order storage
+- **Production Ready** — Logging, health checks, and error handling
+- **Docker Support** — One-command deployment
+- **Environment Configuration** — Configure via `.env` files
+- **Zero API Costs** — No external dependencies or API fees
 
 ---
 
-## 🏗️ Infrastructure Architecture
+## Infrastructure Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -76,9 +68,9 @@ Onboarding Specialist needs to understand deeply:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-**Prerequisites:** Docker + 1.7 GB Phi-2 model
+**Prerequisites:** Docker and 1.7 GB of disk space for the Phi-2 model
 
 ### Step 1: Download Model (one-time setup)
 
@@ -111,7 +103,7 @@ USE_LOCAL_AI=false docker-compose up -d
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 restaurant-ai/
@@ -133,7 +125,7 @@ restaurant-ai/
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 Copy `.env.example` to `.env` and update as needed:
 
@@ -151,7 +143,7 @@ LOG_LEVEL=INFO
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -167,7 +159,7 @@ LOG_LEVEL=INFO
 
 ---
 
-## 💬 Chat Examples
+## Chat Examples
 
 ```bash
 # Ask about menu items
@@ -183,7 +175,7 @@ curl -X POST http://localhost:8000/chat \
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 pytest
@@ -194,7 +186,7 @@ mypy app/
 
 ---
 
-## 🐳 Docker Commands
+## Docker Commands
 
 ```bash
 docker-compose up --build    # Build and start
@@ -205,7 +197,7 @@ docker-compose down          # Stop
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[SETUP.md](SETUP.md)** — Complete setup guide for new users
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Production deployment guide
@@ -215,7 +207,7 @@ docker-compose down          # Stop
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -224,11 +216,11 @@ docker-compose down          # Stop
 
 ---
 
-## 🙋 Support
+## Support
 
 - **Issues:** https://github.com/Erics38/restaurant-ai-chatbot/issues
 - **API Docs:** http://localhost:8000/api/docs (when running locally)
 
 ---
 
-**Built with FastAPI, Python, and surfer vibes 🏄**
+Built with FastAPI and Python.

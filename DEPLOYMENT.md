@@ -275,10 +275,10 @@ docker stats
 
 2. **Deploy** (same steps as DigitalOcean)
 
-**Why Hetzner?**
+**Why Hetzner:**
 - 50% cheaper than competitors
-- Excellent performance
-- EU-based (great for GDPR)
+- Good performance
+- EU-based for GDPR compliance
 
 ### Railway.app (One-Click Deploy)
 
@@ -310,7 +310,7 @@ docker stats
    - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
    - Environment: Set USE_LOCAL_AI=false
 
-4. Deploy!
+4. Deploy
 
 ### Fly.io
 
@@ -527,7 +527,7 @@ sudo systemctl restart nginx
 # Get SSL certificate
 sudo certbot --nginx -d your-domain.com
 
-# Auto-renewal is set up automatically!
+# Auto-renewal is enabled by default
 ```
 
 ---
@@ -642,7 +642,7 @@ docker-compose restart llama-server
 
 # Check memory
 docker stats llama-server
-# Need 4GB minimum!
+# Requires 4GB minimum
 ```
 
 ### Database Locked
@@ -713,4 +713,4 @@ docker-compose up -d
 
 ---
 
-**Your restaurant AI is ready for production! 🚀**
+Your restaurant AI is ready for production.

@@ -395,7 +395,7 @@ EOF
 pre-commit install
 ```
 
-Now checks run automatically on `git commit`!
+Checks now run automatically on `git commit`.
 
 ---
 
@@ -465,4 +465,4 @@ Included:
 
 ---
 
-**Your CI/CD pipeline is ready to use! Push code and watch it work automatically.**
+Your CI/CD pipeline is configured. Push code to trigger automated builds and tests.
