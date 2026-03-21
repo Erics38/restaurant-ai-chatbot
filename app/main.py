@@ -58,7 +58,7 @@ async def startup_event():
     """Run on application startup."""
     logger.info("Starting Restaurant AI v1.0.0")
     logger.info(f"Environment: {settings.environment}")
-    logger.info(f"Database: {settings.database_url}")
+    logger.info(f"Restaurant: {settings.restaurant_name}")
     logger.info(f"CORS Origins: {settings.allowed_origins_list}")
 
 
