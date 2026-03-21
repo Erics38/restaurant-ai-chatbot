@@ -40,4 +40,4 @@ def sample_order_items():
 @pytest.fixture
 def sample_chat_messages():
     """Provide sample chat messages for testing."""
-    return ["hello", "what burgers do you have?", "i'm on yelp", "what do you recommend?", "how much does it cost?"]
+    return ["hello", "what burgers do you have?", "what do you recommend?", "how much does it cost?"]

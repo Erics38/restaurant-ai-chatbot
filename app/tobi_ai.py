@@ -102,7 +102,6 @@ def get_tobi_response(prompt: str) -> str:
 
     Args:
         prompt: User's message
-        is_vip: Whether the user said the magic password
 
     Returns:
         Tobi's response string

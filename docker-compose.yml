@@ -32,9 +32,6 @@ services:
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       # CORS (adjust for production)
       - ALLOWED_ORIGINS=*
-      # Features
-      - ENABLE_MAGIC_PASSWORD=true
-      - MAGIC_PASSWORD=i'm on yelp
       # AI Settings (enabled by default)
       - USE_LOCAL_AI=${USE_LOCAL_AI:-true}
       - LLAMA_SERVER_URL=${LLAMA_SERVER_URL:-http://llama-server:8080}

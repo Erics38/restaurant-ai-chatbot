@@ -4,30 +4,6 @@ The Common House menu data.
 
 from typing import Any
 
-# Presidential birth years for order numbers (first 20 presidents)
-PRESIDENTIAL_YEARS: list[int] = [
-    1732,
-    1735,
-    1743,
-    1751,
-    1758,
-    1767,
-    1767,
-    1782,
-    1773,
-    1784,
-    1795,
-    1784,
-    1800,
-    1804,
-    1808,
-    1809,
-    1822,
-    1818,
-    1831,
-    1881,
-]
-
 # The Common House Menu Data
 MENU_DATA: dict[str, Any] = {
     "restaurant_name": "The Common House",
@@ -67,16 +43,3 @@ MENU_DATA: dict[str, Any] = {
         {"name": "Whiskey Sour", "description": "Bourbon, lemon, egg white", "price": 12.00},
     ],
 }
-
-
-def get_next_order_number(order_count: int) -> int:
-    """
-    Get the next presidential birth year order number.
-
-    Args:
-        order_count: Current number of orders
-
-    Returns:
-        Presidential birth year to use as order number
-    """
-    return PRESIDENTIAL_YEARS[order_count % len(PRESIDENTIAL_YEARS)]
