@@ -133,8 +133,6 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 
-
-
 # ===== Main Entry Point =====
 if __name__ == "__main__":
     import uvicorn
