@@ -68,7 +68,6 @@ class TestChatEndpoint:
 
         assert "response" in data
         assert "session_id" in data
-        assert "has_magic_password" in data
         assert "restaurant" in data
         assert isinstance(data["response"], str)
         assert len(data["response"]) > 0
@@ -83,15 +82,15 @@ class TestChatEndpoint:
         assert isinstance(data["response"], str)
         assert len(data["response"]) > 0
 
-    def test_chat_magic_password(self):
-        """Test POST /chat with magic password."""
-        response = client.post("/chat", json={"message": "i'm on yelp"})
+    def test_chat_generic_message(self):
+        """Test POST /chat with a generic message."""
+        response = client.post("/chat", json={"message": "tell me about your food"})
         assert response.status_code == 200
         data = response.json()
 
-        assert data["has_magic_password"] is True
-        # VIP response should be different/enthusiastic
-        assert "yelp" in data["response"].lower() or len(data["response"]) > 20
+        assert "response" in data
+        assert isinstance(data["response"], str)
+        assert len(data["response"]) > 0
 
     def test_chat_empty_message_rejected(self):
         """Test POST /chat with empty message returns 422."""

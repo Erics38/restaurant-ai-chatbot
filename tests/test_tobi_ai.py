@@ -14,73 +14,65 @@ class TestTobiResponses:
         """Test Tobi responds to greetings."""
         greetings = ["hello", "hi", "hey", "what's up"]
         for greeting in greetings:
-            response = get_tobi_response(greeting, is_vip=False)
+            response = get_tobi_response(greeting)
             assert isinstance(response, str)
             assert len(response) > 0
             # Tobi should give a friendly response
             assert len(response) > 5  # Basic validation
 
-    def test_vip_response(self):
-        """Test VIP magic password triggers special response."""
-        response = get_tobi_response("i'm on yelp", is_vip=True)
-        assert isinstance(response, str)
-        assert len(response) > 0
-        # VIP response should be different/enthusiastic
-        assert "yelp" in response.lower() or "review" in response.lower() or len(response) > 20
-
     def test_menu_question_response(self):
         """Test Tobi responds to menu questions."""
         menu_questions = ["what's on the menu", "show me the menu", "what do you have"]
         for question in menu_questions:
-            response = get_tobi_response(question, is_vip=False)
+            response = get_tobi_response(question)
             assert isinstance(response, str)
             assert len(response) > 0
 
     def test_burger_question(self):
         """Test Tobi responds to burger-specific questions."""
-        response = get_tobi_response("what burgers do you have?", is_vip=False)
+        response = get_tobi_response("what burgers do you have?")
         assert isinstance(response, str)
         assert "burger" in response.lower()
 
     def test_starter_question(self):
         """Test Tobi responds to starter questions."""
-        response = get_tobi_response("what starters do you have?", is_vip=False)
+        response = get_tobi_response("what starters do you have?")
         assert isinstance(response, str)
         assert len(response) > 0  # Just verify we get a response
 
     def test_drink_question(self):
         """Test Tobi responds to drink questions."""
-        response = get_tobi_response("what drinks do you have?", is_vip=False)
+        response = get_tobi_response("what drinks do you have?")
         assert isinstance(response, str)
         assert len(response) > 0  # Just verify we get a response
 
     def test_dessert_question(self):
         """Test Tobi responds to dessert questions."""
-        response = get_tobi_response("what desserts do you have?", is_vip=False)
+        response = get_tobi_response("what desserts do you have?")
         assert isinstance(response, str)
         assert len(response) > 0  # Just verify we get a response
 
     def test_recommendation_question(self):
         """Test Tobi gives recommendations."""
-        response = get_tobi_response("what do you recommend?", is_vip=False)
+        response = get_tobi_response("what do you recommend?")
         assert isinstance(response, str)
         assert len(response) > 0
 
     def test_price_question(self):
         """Test Tobi responds to price questions."""
-        response = get_tobi_response("how much does it cost?", is_vip=False)
+        response = get_tobi_response("how much does it cost?")
         assert isinstance(response, str)
         assert "price" in response.lower() or "$" in response
 
     def test_random_message(self):
         """Test Tobi handles random messages."""
-        response = get_tobi_response("random gibberish xyz123", is_vip=False)
+        response = get_tobi_response("random gibberish xyz123")
         assert isinstance(response, str)
         assert len(response) > 0
 
     def test_empty_message_handled(self):
         """Test Tobi handles empty messages gracefully."""
-        response = get_tobi_response("", is_vip=False)
+        response = get_tobi_response("")
         assert isinstance(response, str)
         assert len(response) > 0
 
@@ -91,7 +83,7 @@ class TestTobiPersonality:
     def test_uses_surfer_slang(self):
         """Test Tobi uses surfer slang in responses."""
         surfer_words = ["dude", "bro", "rad", "sick", "gnarly", "killer", "epic", "stoked", "totally", "yo"]
-        responses = [get_tobi_response(msg, is_vip=False) for msg in ["hello", "what's up", "yo"]]
+        responses = [get_tobi_response(msg) for msg in ["hello", "what's up", "yo"]]
 
         # At least one response should contain surfer slang
         found_slang = False
@@ -104,7 +96,7 @@ class TestTobiPersonality:
 
     def test_friendly_tone(self):
         """Test Tobi maintains friendly tone."""
-        response = get_tobi_response("hello", is_vip=False)
+        response = get_tobi_response("hello")
         # Response should be positive and welcoming
         assert len(response) > 10
         assert not any(word in response.lower() for word in ["error", "wrong", "bad", "no"])

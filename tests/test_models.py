@@ -33,18 +33,10 @@ class TestChatResponse:
 
     def test_valid_chat_response(self):
         """Test creating a valid chat response."""
-        response = ChatResponse(
-            response="Hey dude!", session_id="abc123", has_magic_password=False, restaurant="The Common House"
-        )
+        response = ChatResponse(response="Hey dude!", session_id="abc123", restaurant="The Common House")
         assert response.response == "Hey dude!"
         assert response.session_id == "abc123"
-        assert response.has_magic_password is False
         assert response.restaurant == "The Common House"
-
-    def test_magic_password_default_false(self):
-        """Test has_magic_password defaults to False."""
-        response = ChatResponse(response="Hey!", session_id="abc", restaurant="Test Restaurant")
-        assert response.has_magic_password is False
 
 
 class TestModelIntegration:
