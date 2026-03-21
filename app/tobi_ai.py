@@ -172,14 +172,13 @@ async def get_ai_response(prompt: str) -> str:
 
     Args:
         prompt: User's message
-        is_vip: Whether the user said the magic password
 
     Returns:
         AI-generated response string
     """
     if not settings.llama_server_url:
         logger.warning("llama_server_url not configured, falling back to templates")
-        return get_tobi_response(prompt, is_vip)
+        return get_tobi_response(prompt)
 
     # Build menu context for the AI
     menu_context = f"""You are Tobi, a super chill surfer dude who works at {settings.restaurant_name}.
@@ -204,8 +203,6 @@ STARTERS:
     for item in MENU_DATA["drinks"]:
         menu_context += f"- {item['name']}: {item['description']} (${item['price']:.2f})\n"
 
-    vip_note = "\n\nIMPORTANT: This customer is a VIP! Be extra friendly and enthusiastic!" if is_vip else ""
-    menu_context += vip_note
     menu_context += "\n\nRespond to the customer in 1-2 short sentences. Keep it casual and fun!"
 
     # Call llama-server API
@@ -226,7 +223,7 @@ STARTERS:
 
             if not ai_text:
                 logger.warning("AI returned empty response, using template fallback")
-                return get_tobi_response(prompt, is_vip)
+                return get_tobi_response(prompt)
 
             logger.info(f"AI response: {ai_text}")
             return ai_text
@@ -234,7 +231,7 @@ STARTERS:
     except Exception as e:
         logger.error(f"Error calling llama-server: {e}")
         logger.info("Falling back to template responses")
-        return get_tobi_response(prompt, is_vip)
+        return get_tobi_response(prompt)
 
 
 async def get_tobi_response_async(prompt: str) -> str:
@@ -244,12 +241,11 @@ async def get_tobi_response_async(prompt: str) -> str:
 
     Args:
         prompt: User's message
-        is_vip: Whether the user said the magic password
 
     Returns:
         Tobi's response string
     """
     if settings.use_local_ai and settings.llama_server_url:
-        return await get_ai_response(prompt, is_vip)
+        return await get_ai_response(prompt)
     else:
-        return get_tobi_response(prompt, is_vip)
+        return get_tobi_response(prompt)

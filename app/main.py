@@ -89,13 +89,7 @@ async def health_check():
     Health check endpoint for monitoring.
     Used by Docker, Kubernetes, load balancers, etc.
     """
-    db_status = "connected" if db.health_check() else "disconnected"
-
-    if db_status == "disconnected":
-        logger.warning("Health check failed: Database disconnected")
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    return HealthResponse(status="healthy", environment=settings.environment, database=db_status, version="1.0.0")
+    return HealthResponse(status="healthy", environment=settings.environment, database="n/a", version="1.0.0")
 
 
 @app.get("/menu", tags=["Menu"])
@@ -120,7 +114,7 @@ async def chat(request: ChatRequest):
         # Get Tobi's response (async)
         ai_response = await get_tobi_response_async(request.message)
 
-        logger.info(f"Chat - Session: {session_id[:8]}... | VIP: {has_magic_password}")
+        logger.info(f"Chat - Session: {session_id[:8]}...")
 
         return ChatResponse(
             response=ai_response,
