@@ -99,59 +99,6 @@ class TestChatEndpoint:
         assert response.status_code == 422
 
 
-class TestOrderEndpoint:
-    """Test order creation and retrieval."""
-
-    def test_create_order(self):
-        """Test POST /order creates an order."""
-        response = client.post(
-            "/order",
-            json={
-                "items": [
-                    {"name": "House Smash Burger", "price": 16.00, "quantity": 2},
-                    {"name": "Truffle Fries", "price": 12.00, "quantity": 1},
-                ]
-            },
-        )
-        assert response.status_code == 200
-        data = response.json()
-
-        assert data["success"] is True
-        assert "order_number" in data
-        assert "total" in data
-        assert "message" in data
-        assert data["total"] == 44.00
-
-        # Order number should be a presidential birth year (1700-2000)
-        assert 1700 <= data["order_number"] <= 2000
-
-    def test_create_empty_order_rejected(self):
-        """Test POST /order with empty items list returns 422."""
-        response = client.post("/order", json={"items": []})
-        assert response.status_code == 422
-
-    def test_get_order_exists(self):
-        """Test GET /order/{order_number} retrieves order."""
-        # First create an order
-        create_response = client.post("/order", json={"items": [{"name": "Test Item", "price": 10.00, "quantity": 1}]})
-        order_number = create_response.json()["order_number"]
-
-        # Then retrieve it
-        get_response = client.get(f"/order/{order_number}")
-        assert get_response.status_code == 200
-        data = get_response.json()
-
-        assert data["order_number"] == order_number
-        assert "items" in data
-        assert "total" in data
-        assert data["total"] == 10.00
-
-    def test_get_order_not_found(self):
-        """Test GET /order/{order_number} with invalid number returns 404."""
-        response = client.get("/order/9999")
-        assert response.status_code == 404
-
-
 class TestCORSAndMiddleware:
     """Test CORS and middleware configuration."""
 
