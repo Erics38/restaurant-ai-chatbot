@@ -2,7 +2,7 @@
 
 Super simple way to run Restaurant AI with Docker! Choose your mode:
 
-## 🚀 Option 1: Template Mode (Easiest - No AI Model)
+## Option 1: Template Mode (Easiest - No AI Model)
 
 **What you get**: Instant responses, perfect for testing
 **Time to start**: 1 minute
@@ -30,7 +30,7 @@ docker-compose up --build -d
 
 ---
 
-## 🤖 Option 2: AI Mode (Smart - With Phi-2 Model)
+## Option 2: AI Mode (Smart - With Phi-2 Model)
 
 **What you get**: Natural language AI responses
 **Time to start**: 2-3 minutes (first time)
@@ -72,7 +72,7 @@ USE_LOCAL_AI=true docker-compose --profile ai up --build -d
 
 ---
 
-## 📊 Useful Commands
+## Useful Commands
 
 ### View Logs
 ```bash
@@ -120,7 +120,7 @@ docker-compose --profile ai up --build -d
 
 ---
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Port Already in Use
 ```bash
@@ -169,7 +169,7 @@ docker-compose --profile ai up --build -d
 
 ---
 
-## 🎯 How It Works
+## How It Works
 
 ### Template Mode
 ```
@@ -181,11 +181,11 @@ User → restaurant-ai container → Fast template responses
 User → restaurant-ai container → llama-server container → Phi-2 model → Smart AI responses
 ```
 
-Both containers run in the same Docker network and can talk to each other!
+Both containers run in the same Docker network and can talk to each other.
 
 ---
 
-## 📦 What Gets Created
+## What Gets Created
 
 When you run Docker Compose, it creates:
 
@@ -203,7 +203,7 @@ The containers mount these directories, so data persists even when you stop/rest
 
 ---
 
-## ⚡ Performance Comparison
+## Performance Comparison
 
 | Mode | Response Time | Memory | Setup Time |
 |------|--------------|--------|------------|
@@ -212,7 +212,7 @@ The containers mount these directories, so data persists even when you stop/rest
 
 ---
 
-## 🚢 Deployment to Production
+## Deployment to Production
 
 ### For Template Mode:
 ```bash
@@ -234,7 +234,7 @@ docker-compose --profile ai up -d
 
 ---
 
-## 🎓 Next Steps
+## Next Steps
 
 Once running:
 1. Open http://localhost:8000/static/restaurant_chat.html
@@ -249,4 +249,4 @@ Want to customize?
 
 ---
 
-**That's it! You're ready to run Restaurant AI with Docker! 🎉**
+You can now run Restaurant AI with Docker.
