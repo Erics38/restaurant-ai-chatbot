@@ -209,10 +209,45 @@ docker-compose down          # Stop
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Submit a pull request
+We welcome contributions! The project uses GitHub Actions for CI/CD to ensure code quality.
+
+### Quick Start for Contributors
+
+1. **Fork and clone** the repository
+2. **Install dependencies**: `pip install -r requirements.txt`
+3. **Install dev tools**: `pip install pytest pytest-asyncio black flake8 mypy`
+4. **Run verification**: `./scripts/verify-ci-locally.sh` (or `.bat` on Windows)
+5. **Make your changes** with tests
+6. **Submit a pull request**
+
+### CI/CD Pipeline
+
+Every push and pull request automatically runs:
+- ✅ Black (code formatting)
+- ✅ Flake8 (linting)
+- ✅ MyPy (type checking)
+- ✅ Pytest (unit tests on Python 3.10, 3.11, 3.12)
+- ✅ Security scans (CodeQL, Bandit)
+- ✅ Docker builds
+
+**View CI status**: [Actions tab](https://github.com/Erics38/restaurant-ai-chatbot/actions)
+
+### Before Submitting
+
+Run checks locally to catch issues early:
+
+```bash
+# All-in-one verification script
+./scripts/verify-ci-locally.sh
+
+# Or run individually
+black app/ tests/ --line-length=120
+flake8 app/ tests/ --max-line-length=120 --extend-ignore=E203,W503
+mypy app/ --ignore-missing-imports
+pytest tests/ -v
+```
+
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CICD_SETUP.md](CICD_SETUP.md) for detailed documentation.
 
 ---
 
