@@ -36,18 +36,18 @@ Open `.env` and review these fields:
 
 ## Step 3: Download the AI Model (Required for AI mode)
 
-This is a one-time download of ~1.7 GB.
+This is a one-time download of ~4.92 GB.
 
 ```bash
 mkdir -p models
-curl -L -o models/phi-2.Q4_K_M.gguf \
-  https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
+  https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 ```
 
 To verify the download:
 ```bash
-ls -lh models/phi-2.Q4_K_M.gguf
-# Expected: file is approximately 1.7 GB
+ls -lh models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
+# Expected: file is approximately 4.92 GB
 ```
 
 ## Step 4: Start the Application

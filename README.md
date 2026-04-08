@@ -1,6 +1,6 @@
 # Restaurant AI — The Common House
 
-A local AI-powered restaurant ordering system. Tobi, the chatbot, knows the full menu and handles order management. Built with FastAPI and a local Phi-2 model.
+A local AI-powered restaurant ordering system. Tobi, the chatbot, knows the full menu and handles order management. Built with FastAPI and a local Llama-3-8B model.
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.118+-green.svg)](https://fastapi.tiangolo.com)
@@ -25,7 +25,7 @@ This project demonstrates patterns used in modern SaaS platforms. Solutions Engi
 ## Features
 
 - **Menu-Aware Chatbot** — Tobi knows food categories, ingredients, and can recommend items
-- **Local AI Model** — Phi-2 runs locally for natural language understanding (2-10s response time)
+- **Local AI Model** — Llama-3-8B runs locally for natural language understanding (2-10s response time)
 - **Template Fallback** — Instant responses (<10ms) when AI is unavailable or disabled
 - **Full Menu System** — Starters, mains, desserts, and drinks
 - **Order Management** — Track orders using presidential birth year order numbers
@@ -70,14 +70,14 @@ This project demonstrates patterns used in modern SaaS platforms. Solutions Engi
 
 ## Quick Start
 
-**Prerequisites:** Docker and 1.7 GB of disk space for the Phi-2 model
+**Prerequisites:** Docker and 4.92 GB of disk space for the Llama-3-8B model
 
 ### Step 1: Download Model (one-time setup)
 
 ```bash
 mkdir -p models
-curl -L -o models/phi-2.Q4_K_M.gguf \
-  https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
+  https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 ```
 
 ### Step 2: Start with Docker

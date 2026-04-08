@@ -1,19 +1,19 @@
 @echo off
 REM Start Restaurant AI in AI Mode (Smart, natural language)
 REM Windows batch script
-REM Requires: models/phi-2.Q4_K_M.gguf (1.7GB)
+REM Requires: models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf (4.92GB)
 
 echo 🤖 Starting Restaurant AI (AI Mode)...
-echo 🧠 Natural language AI responses using Phi-2
+echo 🧠 Natural language AI responses using Llama-3-8B
 echo.
 
 REM Check if model exists
-if not exist "models\phi-2.Q4_K_M.gguf" (
+if not exist "models\Meta-Llama-3-8B-Instruct.Q4_K_M.gguf" (
     echo ❌ ERROR: Model file not found!
     echo.
-    echo Please download the Phi-2 model first:
+    echo Please download the Llama-3-8B model first:
     echo   mkdir models
-    echo   curl -L -o models/phi-2.Q4_K_M.gguf https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+    echo   curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
     echo.
     exit /b 1
 )

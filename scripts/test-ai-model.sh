@@ -3,7 +3,7 @@
 # This script tests the llama-server directly to verify AI is working
 
 echo "=========================================="
-echo "Testing AI Model (Phi-2)"
+echo "Testing AI Model (Llama-3-8B)"
 echo "=========================================="
 echo ""
 

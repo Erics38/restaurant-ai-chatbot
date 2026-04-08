@@ -82,3 +82,6 @@ server_local.py
 *.bak
 *.backup
 .claude/
+
+# Windows NUL device artefacts
+nul

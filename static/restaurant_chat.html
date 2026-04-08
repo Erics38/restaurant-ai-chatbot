@@ -1,10 +1,35 @@
 <!DOCTYPE html>
+<!--
+  restaurant_chat.html — The Common House chat interface
+
+  This is a self-contained single-page application with no build step and no
+  external dependencies (no React, no npm, no CDN imports).  Everything — HTML,
+  CSS, and JavaScript — lives in this one file.
+
+  Architecture overview:
+    - On page load: generate/restore a session UUID, fetch the menu from /menu,
+      then load conversation history from /chat/history/{sessionId}.
+    - On each message: POST to /chat with the message + session ID, display the reply.
+    - Session ID is stored in localStorage so conversations survive page refreshes.
+    - The menu is loaded once and cached in the `menuData` variable.
+
+  Key functions:
+    initializeSession()       Create or restore session UUID from localStorage
+    loadConversationHistory() Fetch and render prior messages from the API
+    loadMenu()                Fetch menu from /menu and render the modal
+    sendMessage(event)        Send a user message and display Tobi's reply
+    addMessage(content, isUser) Append a message bubble to the chat
+    clearConversation()       Wipe localStorage session and reload the page
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Common House - AI Assistant</title>
     <style>
+        /* =====================================================================
+           Reset & base
+           ===================================================================== */
         * {
             margin: 0;
             padding: 0;
@@ -19,6 +44,9 @@
             flex-direction: column;
         }
 
+        /* =====================================================================
+           Header bar
+           ===================================================================== */
         .header {
             background: white;
             padding: 1rem 2rem;
@@ -33,6 +61,7 @@
             font-size: 1.5rem;
         }
 
+        /* Shared style for the "View Menu" and "Clear Chat" header buttons */
         .menu-link {
             background: #4299e1;
             color: white;
@@ -47,6 +76,9 @@
             background: #3182ce;
         }
 
+        /* =====================================================================
+           Chat container — takes remaining height between header and input bar
+           ===================================================================== */
         .chat-container {
             flex: 1;
             display: flex;
@@ -57,6 +89,7 @@
             padding: 0 1rem;
         }
 
+        /* Scrollable message history */
         .messages {
             flex: 1;
             overflow-y: auto;
@@ -66,6 +99,11 @@
             gap: 1rem;
         }
 
+        /* =====================================================================
+           Message bubbles
+           User messages are right-aligned (flex-direction: row-reverse).
+           Assistant messages are left-aligned (default row direction).
+           ===================================================================== */
         .message {
             display: flex;
             gap: 0.75rem;
@@ -73,9 +111,10 @@
         }
 
         .message.user {
-            flex-direction: row-reverse;
+            flex-direction: row-reverse;  /* Avatar on the right for user messages */
         }
 
+        /* Circular avatar badge */
         .message-avatar {
             width: 32px;
             height: 32px;
@@ -85,17 +124,13 @@
             justify-content: center;
             font-weight: bold;
             color: white;
-            flex-shrink: 0;
+            flex-shrink: 0;   /* Don't shrink avatar when message text is long */
         }
 
-        .message.user .message-avatar {
-            background: #4299e1;
-        }
+        .message.user .message-avatar      { background: #4299e1; }  /* Blue for user */
+        .message.assistant .message-avatar { background: #48bb78; }  /* Green for Tobi */
 
-        .message.assistant .message-avatar {
-            background: #48bb78;
-        }
-
+        /* Bubble content area */
         .message-content {
             background: white;
             padding: 1rem;
@@ -105,11 +140,15 @@
             line-height: 1.5;
         }
 
+        /* User bubbles are blue; assistant bubbles stay white */
         .message.user .message-content {
             background: #4299e1;
             color: white;
         }
 
+        /* =====================================================================
+           Message input bar (sticky at bottom)
+           ===================================================================== */
         .input-container {
             padding: 1rem 0 2rem;
             background: white;
@@ -134,10 +173,9 @@
             transition: border-color 0.2s;
         }
 
-        .message-input:focus {
-            border-color: #4299e1;
-        }
+        .message-input:focus { border-color: #4299e1; }
 
+        /* Disabled state: shown while menu/history is loading */
         .send-button {
             background: #4299e1;
             color: white;
@@ -149,15 +187,13 @@
             transition: background 0.2s;
         }
 
-        .send-button:hover:not(:disabled) {
-            background: #3182ce;
-        }
+        .send-button:hover:not(:disabled) { background: #3182ce; }
+        .send-button:disabled             { background: #a0aec0; cursor: not-allowed; }
 
-        .send-button:disabled {
-            background: #a0aec0;
-            cursor: not-allowed;
-        }
-
+        /* =====================================================================
+           "Tobes is thinking..." loading indicator
+           Hidden by default; shown during API call via .show class toggle.
+           ===================================================================== */
         .loading {
             display: none;
             align-items: center;
@@ -166,27 +202,25 @@
             font-style: italic;
         }
 
-        .loading.show {
-            display: flex;
-        }
+        .loading.show { display: flex; }
 
+        /* =====================================================================
+           Menu modal
+           Hidden overlay that slides in when the user clicks "View Menu".
+           ===================================================================== */
         .menu-modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);   /* Semi-transparent backdrop */
             z-index: 1000;
             align-items: center;
             justify-content: center;
             padding: 2rem;
         }
 
-        .menu-modal.show {
-            display: flex;
-        }
+        .menu-modal.show { display: flex; }  /* Toggled by showMenu() / hideMenu() */
 
         .menu-content {
             background: white;
@@ -206,10 +240,8 @@
             color: #718096;
         }
 
-        .menu-category {
-            margin-bottom: 2rem;
-        }
-
+        /* Category header (e.g. "STARTERS") */
+        .menu-category        { margin-bottom: 2rem; }
         .menu-category h3 {
             color: #2d3748;
             margin-bottom: 1rem;
@@ -219,6 +251,7 @@
             padding-bottom: 0.5rem;
         }
 
+        /* Individual menu item row */
         .menu-item {
             display: flex;
             justify-content: space-between;
@@ -227,53 +260,58 @@
             border-bottom: 1px solid #f7fafc;
         }
 
-        .menu-item-info h4 {
-            color: #2d3748;
-            margin-bottom: 0.25rem;
-        }
-
-        .menu-item-info p {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-
-        .menu-item-price {
-            color: #4299e1;
-            font-weight: bold;
-        }
+        .menu-item-info h4 { color: #2d3748; margin-bottom: 0.25rem; }
+        .menu-item-info p  { color: #718096; font-size: 0.9rem; }
+        .menu-item-price   { color: #4299e1; font-weight: bold; }
     </style>
 </head>
 <body>
+
+    <!-- ===================================================================
+         Header
+         =================================================================== -->
     <div class="header">
         <h1>🍽️ The Common House</h1>
         <div style="display: flex; gap: 0.5rem;">
+            <!-- Clears localStorage session ID and reloads so a fresh session starts -->
             <button class="menu-link" onclick="clearConversation()" style="background: #e53e3e; border: none; cursor: pointer;">Clear Chat</button>
+            <!-- Opens the menu modal populated from the /menu API -->
             <a href="#" class="menu-link" onclick="showMenu()">View Menu</a>
         </div>
     </div>
 
+    <!-- ===================================================================
+         Chat area
+         =================================================================== -->
     <div class="chat-container">
+        <!-- Message list — populated by addMessage() and loadConversationHistory() -->
         <div class="messages" id="messages">
+            <!-- Initial greeting shown before history loads; replaced by loadConversationHistory() -->
             <div class="message assistant">
                 <div class="message-avatar">🏄‍♂️</div>
-            	<div class="message-content">
-    Hey dude! I'm Tobi, your chill restaurant assistant. I can help you check out our menu and get you some rad food. What's up?
-		</div>
+                <div class="message-content">
+                    Hey dude! I'm Tobi, your chill restaurant assistant. I can help you check out our menu and get you some rad food. What's up?
+                </div>
             </div>
         </div>
 
+        <!-- Typing indicator — visible only during the /chat fetch -->
         <div class="loading" id="loading">
             <div class="message-avatar">🏄‍♂️</div>
             <div>Tobes is thinking...</div>
         </div>
     </div>
 
+    <!-- ===================================================================
+         Message input bar
+         Input and button are disabled until loadMenu() succeeds (enableChat()).
+         =================================================================== -->
     <div class="input-container">
         <form class="input-form" onsubmit="sendMessage(event)">
-            <input 
-                type="text" 
-                class="message-input" 
-                id="messageInput" 
+            <input
+                type="text"
+                class="message-input"
+                id="messageInput"
                 placeholder="Ask about our menu or place an order..."
                 disabled
             >
@@ -281,7 +319,10 @@
         </form>
     </div>
 
-    <!-- Menu Modal -->
+    <!-- ===================================================================
+         Menu modal
+         Content populated by renderMenu() after /menu fetch succeeds.
+         =================================================================== -->
     <div class="menu-modal" id="menuModal">
         <div class="menu-content">
             <button class="close-menu" onclick="hideMenu()">&times;</button>
@@ -290,18 +331,36 @@
         </div>
     </div>
 
+    <!-- ===================================================================
+         JavaScript
+         =================================================================== -->
     <script>
+        // Base URL for all API calls — derived from the page origin so this works
+        // on localhost:8000, an EC2 IP, or a custom domain without code changes.
         const API_URL = window.location.origin;
-        let sessionId = null;
-        let menuData = null;
 
-        // Session management with localStorage
+        let sessionId = null;   // UUID persisted in localStorage
+        let menuData  = null;   // Cached /menu response; set once in loadMenu()
+
+        // -------------------------------------------------------------------
+        // Session management
+        // -------------------------------------------------------------------
+
+        /**
+         * Create a new session UUID or restore the one saved in localStorage.
+         *
+         * A session ties all messages in a conversation together so the DB
+         * and the AI both have full context.  The UUID is generated in the
+         * browser with crypto.randomUUID() which is available in all modern
+         * browsers (Chrome 92+, Firefox 95+, Safari 15.4+).
+         *
+         * Called once on page load before any API requests.
+         */
         function initializeSession() {
-            // Try to get existing session from localStorage
             sessionId = localStorage.getItem('restaurantSessionId');
 
             if (!sessionId) {
-                // Generate new UUID v4
+                // First visit (or after clearConversation()) — generate a new UUID
                 sessionId = crypto.randomUUID();
                 localStorage.setItem('restaurantSessionId', sessionId);
                 console.log('Created new session:', sessionId);
@@ -312,6 +371,19 @@
             return sessionId;
         }
 
+        // -------------------------------------------------------------------
+        // Conversation history
+        // -------------------------------------------------------------------
+
+        /**
+         * Fetch and render the stored message history for the current session.
+         *
+         * Called on page load after initializeSession().  If the session has no
+         * prior messages (e.g. first visit), shows the default greeting instead.
+         *
+         * Errors are silently ignored — the user just sees the greeting, which
+         * is an acceptable graceful degradation.
+         */
         async function loadConversationHistory() {
             try {
                 const response = await fetch(`${API_URL}/chat/history/${sessionId}`);
@@ -319,15 +391,18 @@
                     const messages = await response.json();
                     console.log('Loaded', messages.length, 'historical messages');
 
-                    // Clear the initial greeting message
+                    // Clear the hard-coded greeting so history can replace it
                     const messagesContainer = document.getElementById('messages');
                     messagesContainer.innerHTML = '';
 
                     if (messages.length === 0) {
-                        // If no history, show initial greeting
-                        addMessage("Hey dude! I'm Tobi, your chill restaurant assistant. I can help you check out our menu and get you some rad food. What's up?", false);
+                        // No history — show the default greeting
+                        addMessage(
+                            "Hey dude! I'm Tobi, your chill restaurant assistant. I can help you check out our menu and get you some rad food. What's up?",
+                            false
+                        );
                     } else {
-                        // Load historical messages
+                        // Render each stored message in order (oldest → newest)
                         messages.forEach(msg => {
                             addMessage(msg.content, msg.role === 'user');
                         });
@@ -336,15 +411,24 @@
                     scrollToBottom();
                 }
             } catch (error) {
+                // Non-fatal — user sees the default greeting and can still chat
                 console.log('No conversation history found or error loading:', error);
             }
         }
 
+        /** Scroll the message list to the most recent message. */
         function scrollToBottom() {
             const messagesContainer = document.getElementById('messages');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        /**
+         * Wipe the current session and reload the page to start fresh.
+         *
+         * Removes the session ID from localStorage so initializeSession() will
+         * generate a brand-new UUID on the next load, creating a clean slate
+         * both client-side and for the AI's context window.
+         */
         function clearConversation() {
             if (confirm('Clear conversation history and start fresh?')) {
                 localStorage.removeItem('restaurantSessionId');
@@ -352,18 +436,38 @@
             }
         }
 
+        // -------------------------------------------------------------------
+        // Menu
+        // -------------------------------------------------------------------
+
+        /**
+         * Fetch the menu from the API and enable the chat input.
+         *
+         * The input is disabled on page load and only enabled here, after the
+         * menu data is available.  This ensures the frontend is fully ready
+         * (and the API is reachable) before the user can send a message.
+         *
+         * On failure, shows an error message in the menu modal.
+         */
         async function loadMenu() {
             try {
                 const response = await fetch(`${API_URL}/menu`);
                 menuData = await response.json();
                 renderMenu();
-                enableChat();
+                enableChat();   // Unlock the input field now that we're ready
             } catch (error) {
                 console.error('Failed to load menu:', error);
-                document.getElementById('menuContent').innerHTML = 'Failed to load menu. Please make sure the API is running.';
+                document.getElementById('menuContent').innerHTML =
+                    'Failed to load menu. Please make sure the API is running.';
             }
         }
 
+        /**
+         * Render the cached menuData into the menu modal's #menuContent div.
+         *
+         * Iterates the four categories in display order and builds HTML for each.
+         * Uses innerHTML for simplicity — menu data is trusted (comes from our own API).
+         */
         function renderMenu() {
             const menuContent = document.getElementById('menuContent');
             let html = '';
@@ -372,7 +476,7 @@
             categories.forEach(category => {
                 html += `<div class="menu-category">`;
                 html += `<h3>${category}</h3>`;
-                
+
                 menuData[category].forEach(item => {
                     html += `
                         <div class="menu-item">
@@ -384,83 +488,115 @@
                         </div>
                     `;
                 });
-                
+
                 html += `</div>`;
             });
 
             menuContent.innerHTML = html;
         }
 
+        /** Un-disable the message input and send button once the app is ready. */
         function enableChat() {
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendButton').disabled = false;
             document.getElementById('messageInput').placeholder = "Ask about our menu or place an order...";
         }
 
+        /** Show the menu modal overlay. */
         function showMenu() {
             document.getElementById('menuModal').classList.add('show');
         }
 
+        /** Hide the menu modal overlay. */
         function hideMenu() {
             document.getElementById('menuModal').classList.remove('show');
         }
 
+        // -------------------------------------------------------------------
+        // Message rendering
+        // -------------------------------------------------------------------
+
+        /**
+         * Append a single message bubble to the chat.
+         *
+         * @param {string}  content - Message text to display.
+         * @param {boolean} isUser  - true → right-aligned blue user bubble;
+         *                           false → left-aligned white assistant bubble.
+         */
         function addMessage(content, isUser = false) {
             const messagesContainer = document.getElementById('messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-            
+
             messageDiv.innerHTML = `
                 <div class="message-avatar">${isUser ? '👤' : '🏄‍♂️'}</div>
                 <div class="message-content">${content}</div>
             `;
-            
+
             messagesContainer.appendChild(messageDiv);
+            // Auto-scroll so the new message is always visible
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        /** Show the "Tobes is thinking..." loading indicator. */
         function showLoading() {
             document.getElementById('loading').classList.add('show');
-            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+            // Scroll so the indicator is visible
+            document.getElementById('messages').scrollTop =
+                document.getElementById('messages').scrollHeight;
         }
 
+        /** Hide the loading indicator once the API responds. */
         function hideLoading() {
             document.getElementById('loading').classList.remove('show');
         }
 
+        // -------------------------------------------------------------------
+        // Chat submission
+        // -------------------------------------------------------------------
+
+        /**
+         * Handle message form submission.
+         *
+         * Flow:
+         *  1. Prevent default form POST.
+         *  2. Display the user's message immediately (optimistic UI).
+         *  3. Show loading indicator.
+         *  4. POST to /chat with the message and current sessionId.
+         *  5. On success, display Tobi's response.
+         *  6. On HTTP error or network failure, display a friendly error message.
+         *
+         * @param {Event} event - The form submit event.
+         */
         async function sendMessage(event) {
             event.preventDefault();
-            
-            const input = document.getElementById('messageInput');
+
+            const input   = document.getElementById('messageInput');
             const message = input.value.trim();
-            
-            if (!message) return;
-            
-            // Add user message
+
+            if (!message) return;   // Don't send empty messages
+
+            // Display user message immediately for a responsive feel
             addMessage(message, true);
-            input.value = '';
-            
-            // Show loading
+            input.value = '';   // Clear the input
+
             showLoading();
-            
+
             try {
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: message,
-                        session_id: sessionId
+                        message:    message,
+                        session_id: sessionId   // Links this message to the conversation
                     })
                 });
-                
-                const data = await response.json();
 
+                const data = await response.json();
                 hideLoading();
 
                 if (!response.ok) {
-                    // Handle HTTP errors (422, 500, etc.)
+                    // HTTP 4xx / 5xx — show the server's error detail
                     const errorMsg = data.detail || data.error || 'Server error occurred';
                     console.error('Server error:', errorMsg, data);
                     addMessage(`Sorry, there was an error: ${errorMsg}`);
@@ -469,29 +605,44 @@
                 } else if (data.response) {
                     addMessage(data.response);
 
+                    // Future feature: VIP / magic-password detection
                     if (data.has_magic_password) {
                         addMessage("🌟 Dude, VIP status detected! I can totally customize any dish for you, bro.");
                     }
                 } else {
+                    // Unexpected response shape — log it and show a fallback
                     console.error('Unexpected response:', data);
                     addMessage('Sorry, got an unexpected response from the server.');
                 }
-                
+
             } catch (error) {
+                // Network failure (API server down, CORS issue, etc.)
                 hideLoading();
                 addMessage("Whoa dude, I'm having trouble connecting to the kitchen. Make sure the API is running and we'll get you sorted!");
                 console.error('Chat error:', error);
             }
         }
 
-        // Load menu and session on page load
+        // -------------------------------------------------------------------
+        // Page initialisation
+        // -------------------------------------------------------------------
+
+        /**
+         * Run on DOMContentLoaded:
+         *  1. initializeSession  — set up / restore the session UUID
+         *  2. loadMenu           — fetch menu data and enable the input
+         *  3. loadConversationHistory — restore prior messages if any exist
+         *
+         * Steps 2 and 3 are awaited sequentially so the chat is not enabled
+         * until both the menu and the history are loaded.
+         */
         window.addEventListener('load', async function() {
             initializeSession();
             await loadMenu();
             await loadConversationHistory();
         });
 
-        // Handle enter key
+        // Submit on Enter key (but not Shift+Enter, which could be used for newlines)
         document.getElementById('messageInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

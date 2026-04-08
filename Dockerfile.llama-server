@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install build dependencies for llama-cpp-python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PINNED version of llama-cpp-python with server support
+# Version pinned for reproducible builds and parameter compatibility
+RUN pip install --no-cache-dir \
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu \
+    llama-cpp-python[server]==0.3.6
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash llama && \
+    chown -R llama:llama /app
+
+USER llama
+
+# Expose port
+EXPOSE 8080
+
+# Command will be provided at runtime
+CMD ["python", "-m", "llama_cpp.server"]

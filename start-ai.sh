@@ -1,18 +1,18 @@
 #!/bin/bash
 # Start Restaurant AI in AI Mode (Smart, natural language)
-# Requires: models/phi-2.Q4_K_M.gguf (1.7GB)
+# Requires: models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf (4.92GB)
 
 echo "🤖 Starting Restaurant AI (AI Mode)..."
-echo "🧠 Natural language AI responses using Phi-2"
+echo "🧠 Natural language AI responses using Llama-3-8B"
 echo ""
 
 # Check if model exists
-if [ ! -f "models/phi-2.Q4_K_M.gguf" ]; then
+if [ ! -f "models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf" ]; then
     echo "❌ ERROR: Model file not found!"
     echo ""
-    echo "Please download the Phi-2 model first:"
+    echo "Please download the Llama-3-8B model first:"
     echo "  mkdir -p models"
-    echo "  curl -L -o models/phi-2.Q4_K_M.gguf https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf"
+    echo "  curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
     echo ""
     exit 1
 fi

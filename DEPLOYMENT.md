@@ -30,8 +30,8 @@ cd Tobi-the-local-server-serfing-server
 
 # Download AI model (one-time, optional for template mode)
 mkdir -p models
-curl -L -o models/phi-2.Q4_K_M.gguf \
-  https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
+  https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 
 # Start with AI mode
 docker-compose up -d
@@ -119,7 +119,7 @@ services:
     volumes:
       - ./models:/models:ro
     command: >
-      -m /models/phi-2.Q4_K_M.gguf
+      -m /models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
       --host 0.0.0.0
       --port 8080
       --ctx-size 4096
@@ -190,8 +190,8 @@ docker stats
 
    # For AI mode, download model
    mkdir -p models
-   curl -L -o models/phi-2.Q4_K_M.gguf \
-     https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+   curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
+     https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 
    # Configure environment
    cp .env.example .env
@@ -635,7 +635,7 @@ docker-compose ps
 docker-compose logs llama-server
 
 # Verify model file exists
-ls -lh models/phi-2.Q4_K_M.gguf
+ls -lh models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 
 # Restart AI server
 docker-compose restart llama-server

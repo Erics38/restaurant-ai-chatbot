@@ -1,81 +1,165 @@
 version: '3.8'
 
+# =============================================================================
+# Tobi Restaurant AI — Docker Compose
+#
+# Two services:
+#   app          — FastAPI application (port 8000, public-facing)
+#   llama-server — Llama-3-8B inference server (port 8080, internal only)
+#
+# Quick start:
+#   docker compose up --build          # Full AI mode (requires 4.9 GB model file)
+#   USE_LOCAL_AI=false docker compose up --build   # Template-only mode (no GPU/model needed)
+#
+# The `app` service waits for `llama-server` to pass its health check before
+# starting, so the first boot takes ~15 minutes while the model loads into RAM.
+# Subsequent starts are faster because the model file is already on disk.
+#
+# Volumes overview:
+#   ./data      → /app/data      Persists the SQLite conversation database
+#   ./logs      → /app/logs      Persists application logs
+#   ./models    → /app/models    Read-only model files (GGUF format)
+#   ./app       → /app/app       Live-reloads Python source in dev (comment out for prod)
+# =============================================================================
+
 services:
-  # Restaurant AI Application
+
+  # ---------------------------------------------------------------------------
+  # app — Restaurant AI FastAPI service
+  # ---------------------------------------------------------------------------
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: restaurant-ai
     ports:
-      - "8000:8000"
+      - "8000:8000"   # Expose to host; visit http://localhost:8000
     volumes:
-      # Persistent data storage
-      - ./data:/app/data
-      # Logs (optional - for debugging)
-      - ./logs:/app/logs
-      # Model files (if using llama.cpp)
-      - ./models:/app/models:ro  # Read-only
-      # Hot reload for development (comment out for production)
-      - ./app:/app/app
+      - ./data:/app/data              # SQLite DB — survives container restarts
+      - ./logs:/app/logs              # App logs — useful for debugging in prod
+      - ./models:/app/models:ro       # GGUF model files — read-only for safety
+      - ./app:/app/app                # Hot reload: remove this line in production
     environment:
-      # Override settings via environment variables
       - ENVIRONMENT=production
       - HOST=0.0.0.0
       - PORT=8000
       - LOG_LEVEL=INFO
-      # Database
+
+      # DATABASE_URL is read by the app but the actual path is hardcoded in
+      # database.py (sqlite:///./data/conversations.db). This env var is kept
+      # here for documentation / potential future migration to Postgres.
       - DATABASE_URL=sqlite:///./data/orders.db
-      # Restaurant
+
       - RESTAURANT_NAME=The Common House
-      # Security
+
+      # SECRET_KEY is used to sign future JWT tokens. Override with a strong
+      # random value in production: openssl rand -hex 32
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
-      # CORS (adjust for production)
+
+      # ALLOWED_ORIGINS controls CORS. "*" allows any origin.
+      # In production, restrict to your domain: https://myrestaurant.com
       - ALLOWED_ORIGINS=*
-      # AI Settings (template mode by default - set USE_LOCAL_AI=true to enable AI)
-      - USE_LOCAL_AI=${USE_LOCAL_AI:-false}
+
+      # AI settings — both can be overridden via shell env vars before `docker compose up`
+      # USE_LOCAL_AI=false → skip Llama-3 and use fast keyword templates instead
+      - USE_LOCAL_AI=${USE_LOCAL_AI:-true}
+      # Internal Docker network URL for the llama-server container
       - LLAMA_SERVER_URL=${LLAMA_SERVER_URL:-http://llama-server:8080}
+
     restart: unless-stopped
+
+    # Don't start the app until llama-server passes its health check.
+    # This prevents 503 errors during the model loading window on first boot.
+    depends_on:
+      llama-server:
+        condition: service_healthy
+
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 10s   # Give the app 10 s to start before health checks begin
+
     networks:
       - restaurant-network
 
-  # ===== AI Server (Always enabled by default) =====
+
+  # ---------------------------------------------------------------------------
+  # llama-server — Llama-3-8B inference server
+  #
+  # Runs llama-cpp-python's built-in HTTP server, which exposes an OpenAI-
+  # compatible API at /v1/chat/completions.  The `app` container calls this
+  # endpoint internally via the restaurant-network bridge.
+  #
+  # Model: Meta-Llama-3-8B-Instruct.Q4_K_M.gguf  (4.9 GB)
+  #   - Must be placed in ./models/ before running
+  #   - Download script: scripts/ec2-setup-with-ai.sh
+  #
+  # Resource requirements:
+  #   - ~7 GB RAM to load the model (Q4_K_M quantisation)
+  #   - 4 CPU cores for reasonable throughput
+  #   - No GPU required (pure CPU inference via llama.cpp)
+  # ---------------------------------------------------------------------------
   llama-server:
-    image: ghcr.io/ggerganov/llama.cpp:server
+    build:
+      context: .
+      dockerfile: Dockerfile.llama-server
     container_name: restaurant-ai-llama
     ports:
-      - "8080:8080"
+      - "8080:8080"   # Exposed for direct testing; not needed by frontend
     volumes:
-      - ./models:/models:ro
+      - ./models:/models:ro   # Read-only — model file never modified at runtime
     command: >
-      -m /models/phi-2.Q4_K_M.gguf
+      python -m llama_cpp.server
+      --model /models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
       --host 0.0.0.0
       --port 8080
-      --ctx-size 4096
-    environment:
-      - LLAMA_ARG_N_GPU_LAYERS=0  # CPU only (set to 35 for GPU)
+      --n_ctx 4096          # Context window: 4096 tokens (system prompt + history + reply)
+      --chat_format llama-3  # Llama-3 uses a specific chat template format
+      --use_mmap false       # Disable memory-mapping; loads entire model into RAM upfront
+                             # (slower to start but more predictable latency per request)
     networks:
       - restaurant-network
+
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 9G      # Hard cap — prevents OOM kill from taking down the host
+          cpus: '4.0'
         reservations:
-          memory: 2G
+          memory: 7G      # Guaranteed allocation for the model
+          cpus: '2.0'
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 5   # After 5 failures the service stays stopped
+        window: 300s
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      # Polls /v1/models — returns 200 once the model is fully loaded into RAM
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/models').read()"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s  # Model takes time to load
+      # 900 s (15 min) start_period: --use_mmap false means the entire 4.9 GB model
+      # must be read from disk into RAM before the server accepts requests.
+      # This is expected on first boot; don't reduce this value without testing.
+      start_period: 900s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # Rotate after 10 MB
+        max-file: "3"     # Keep 3 rotated files (30 MB total)
+
+    stop_grace_period: 30s  # Give the model server time to finish in-flight requests
     restart: unless-stopped
 
+
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
   restaurant-network:
-    driver: bridge
+    driver: bridge   # Default bridge network; containers find each other by service name

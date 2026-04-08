@@ -30,11 +30,11 @@ docker-compose up --build -d
 
 ---
 
-## Option 2: AI Mode (Smart - With Phi-2 Model)
+## Option 2: AI Mode (Smart - With Llama-3-8B Model)
 
 **What you get**: Natural language AI responses
 **Time to start**: 2-3 minutes (first time)
-**Requirements**: Docker + 1.7GB model file
+**Requirements**: Docker + 4.92GB model file
 
 ### Step 1: Download Model (one-time, ~2 minutes)
 
@@ -42,9 +42,9 @@ docker-compose up --build -d
 # Create models directory
 mkdir -p models
 
-# Download Phi-2 model (1.7GB)
-curl -L -o models/phi-2.Q4_K_M.gguf \
-  https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+# Download Llama-3-8B model (4.92GB)
+curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
+  https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 ```
 
 ### Step 2: Start with AI
@@ -143,7 +143,7 @@ docker-compose ps
 docker-compose logs llama-server
 
 # Make sure model file exists
-ls -lh models/phi-2.Q4_K_M.gguf
+ls -lh models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
 ```
 
 ### Slow First Response
@@ -178,7 +178,7 @@ User → restaurant-ai container → Fast template responses
 
 ### AI Mode
 ```
-User → restaurant-ai container → llama-server container → Phi-2 model → Smart AI responses
+User → restaurant-ai container → llama-server container → Llama-3-8B model → Smart AI responses
 ```
 
 Both containers run in the same Docker network and can talk to each other.
@@ -196,7 +196,7 @@ restaurant-ai/
 ├── logs/
 │   └── app.log           ← Created automatically
 └── models/
-    └── phi-2.Q4_K_M.gguf ← You download this once
+    └── Meta-Llama-3-8B-Instruct.Q4_K_M.gguf ← You download this once
 ```
 
 The containers mount these directories, so data persists even when you stop/restart.

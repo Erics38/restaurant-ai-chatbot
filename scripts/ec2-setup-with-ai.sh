@@ -1,6 +1,6 @@
 #!/bin/bash
 # EC2 Setup Script with Full AI Support
-# This script sets up the Restaurant AI Chatbot with Phi-2 AI model on EC2
+# This script sets up the Restaurant AI Chatbot with Llama-3-8B AI model on EC2
 # Run this on a fresh Ubuntu 24.04 instance
 
 set -e  # Exit on any error
@@ -43,11 +43,11 @@ cd restaurant-ai-chatbot
 sudo mkdir -p logs data models
 sudo chown -R ubuntu:ubuntu logs data models
 
-# Download Phi-2 AI model (1.7GB)
-echo "[5/8] Downloading Phi-2 AI model (1.7GB)..."
-if [ ! -f "models/phi-2.Q4_K_M.gguf" ]; then
-    wget -O models/phi-2.Q4_K_M.gguf \
-      https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf
+# Download Llama-3-8B AI model (4.92GB)
+echo "[5/8] Downloading Llama-3-8B AI model (4.92GB)..."
+if [ ! -f "models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf" ]; then
+    wget -O models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
+      https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
     echo "✓ Model downloaded successfully"
 else
     echo "✓ Model already exists, skipping download"
@@ -91,7 +91,7 @@ services:
       - "-m"
       - "llama_cpp.server"
       - "--model"
-      - "/models/phi-2.Q4_K_M.gguf"
+      - "/models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf"
       - "--host"
       - "0.0.0.0"
       - "--port"
