@@ -146,6 +146,15 @@
             color: white;
         }
 
+        /* Backend-specific bubble colours for assistant messages */
+        .message.assistant.backend-bedrock .message-content {
+            background: #ebf8ff;   /* light blue */
+        }
+        .message.assistant.backend-llama .message-content {
+            background: #fff5f5;   /* light red */
+        }
+        /* backend-template keeps the default white */
+
         /* =====================================================================
            Message input bar (sticky at bottom)
            ===================================================================== */
@@ -539,14 +548,16 @@
         /**
          * Append a single message bubble to the chat.
          *
-         * @param {string}  content - Message text to display.
-         * @param {boolean} isUser  - true → right-aligned blue user bubble;
-         *                           false → left-aligned white assistant bubble.
+         * @param {string}  content  - Message text to display.
+         * @param {boolean} isUser   - true → right-aligned blue user bubble;
+         *                            false → left-aligned assistant bubble.
+         * @param {string}  backend  - 'template' | 'llama' | 'bedrock' (assistant only).
          */
-        function addMessage(content, isUser = false) {
+        function addMessage(content, isUser = false, backend = 'template') {
             const messagesContainer = document.getElementById('messages');
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            const backendClass = isUser ? '' : `backend-${backend}`;
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'} ${backendClass}`.trim();
 
             messageDiv.innerHTML = `
                 <div class="message-avatar">${isUser ? '👤' : '🏄‍♂️'}</div>
@@ -625,7 +636,7 @@
                 } else if (data.error) {
                     addMessage(`Sorry, there was an error: ${data.error}`);
                 } else if (data.response) {
-                    addMessage(data.response);
+                    addMessage(data.response, false, backend);
 
                     // Future feature: VIP / magic-password detection
                     if (data.has_magic_password) {
