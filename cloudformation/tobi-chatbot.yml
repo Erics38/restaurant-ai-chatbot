@@ -321,7 +321,7 @@ Resources:
           RETRIES=150
           HEALTHY=0
           for i in $(seq 1 $RETRIES); do
-            if python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)" > /dev/null 2>&1; then
+            if python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:80/health', timeout=5)" > /dev/null 2>&1; then
               echo "App is healthy."
               HEALTHY=1
               break
