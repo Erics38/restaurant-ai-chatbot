@@ -33,10 +33,6 @@ Metadata:
         Parameters:
           - BedrockRegion
           - BedrockModelId
-      - Label:
-          default: Optional
-        Parameters:
-          - KeyPairName
     ParameterLabels:
       RestaurantName:
         default: Restaurant Name (shown to customers)
@@ -44,8 +40,6 @@ Metadata:
         default: Bedrock Region (must have Claude access)
       BedrockModelId:
         default: Bedrock Model ID
-      KeyPairName:
-        default: EC2 Key Pair (for SSH access - optional)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Parameters
@@ -78,17 +72,10 @@ Parameters:
       Bedrock model ID. The default uses the cross-region inference profile
       (us.*) for best availability. Change only if you need a specific model.
 
-  KeyPairName:
-    Type: String
-    Default: ''
-    Description: >
-      EC2 key pair name for SSH access. Leave blank if you do not need SSH.
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Conditions
 # ─────────────────────────────────────────────────────────────────────────────
-Conditions:
-  HasKeyPair: !Not [!Equals [!Ref KeyPairName, '']]
+Conditions: {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Resources
@@ -158,7 +145,7 @@ Resources:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Tobi chatbot - allow HTTP inbound, all outbound
+      GroupDescription: Tobi chatbot - HTTP inbound only, all outbound
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -166,11 +153,6 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
           Description: HTTP - chat UI
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-          Description: SSH - optional access
       # Explicit outbound: allow HTTPS so Docker pull + Bedrock API calls work
       SecurityGroupEgress:
         - IpProtocol: tcp
@@ -246,7 +228,6 @@ Resources:
           SubnetId: !Ref PublicSubnet
           GroupSet:
             - !Ref SecurityGroup
-      KeyName: !If [HasKeyPair, !Ref KeyPairName, !Ref 'AWS::NoValue']
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -372,6 +353,3 @@ Outputs:
     Description: EC2 public IP address
     Value: !GetAtt EC2Instance.PublicIp
 
-  SSHCommand:
-    Description: SSH command (only useful if you provided a key pair)
-    Value: !Sub 'ssh ec2-user@${EC2Instance.PublicIp}'
