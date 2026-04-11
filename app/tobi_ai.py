@@ -57,30 +57,46 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# AWS Bedrock client — created once at module load, reused across requests.
-# boto3 clients are thread-safe; creating one per-request causes race conditions.
+# AWS Bedrock client — created lazily on first use, then cached.
+# Lazy init avoids a 60-90s IMDS credential fetch at module load time that
+# would delay the health endpoint and cause UserData health checks to time out.
+# boto3 clients are thread-safe once created.
 # ---------------------------------------------------------------------------
 try:
     import boto3
     import botocore.exceptions
     from botocore.config import Config as BotocoreConfig
-    _bedrock_client = boto3.client(
-        "bedrock-runtime",
-        region_name=settings.aws_region,
-        config=BotocoreConfig(
-            retries={"mode": "adaptive", "max_attempts": 5}
-        ),
-    )
-    _bedrock_available = True
-    logger.info(f"Bedrock client initialised (region={settings.aws_region})")
+    _boto3_available = True
 except ImportError:
-    _bedrock_client = None
-    _bedrock_available = False
+    _boto3_available = False
     logger.warning("boto3 not installed — Bedrock backend unavailable")
-except Exception as e:
-    _bedrock_client = None
-    _bedrock_available = False
-    logger.warning(f"Failed to create Bedrock client: {type(e).__name__}: {e}")
+
+_bedrock_client = None
+_bedrock_available = False
+
+
+def _get_bedrock_client():
+    """Return the cached Bedrock client, creating it on first call."""
+    global _bedrock_client, _bedrock_available
+    if _bedrock_client is not None:
+        return _bedrock_client
+    if not _boto3_available:
+        return None
+    try:
+        _bedrock_client = boto3.client(
+            "bedrock-runtime",
+            region_name=settings.aws_region,
+            config=BotocoreConfig(
+                retries={"mode": "adaptive", "max_attempts": 5}
+            ),
+        )
+        _bedrock_available = True
+        logger.info(f"Bedrock client initialised (region={settings.aws_region})")
+    except Exception as e:
+        _bedrock_client = None
+        _bedrock_available = False
+        logger.warning(f"Failed to create Bedrock client: {type(e).__name__}: {e}")
+    return _bedrock_client
 
 
 # ---------------------------------------------------------------------------
@@ -490,7 +506,8 @@ async def get_bedrock_response_with_context(prompt: str, session_id: str, db) ->
     from app.prompts import get_system_prompt
     from app.models import DBMessage
 
-    if not _bedrock_available:
+    client = _get_bedrock_client()
+    if client is None:
         logger.error("boto3 not installed or Bedrock client failed to init — falling back to templates")
         return get_tobi_response(prompt)
 
@@ -516,7 +533,7 @@ async def get_bedrock_response_with_context(prompt: str, session_id: str, db) ->
     system = [{"text": get_system_prompt(include_menu=True)}]
 
     def _sync_call():
-        return _bedrock_client.converse(
+        return client.converse(
             modelId=settings.bedrock_model_id,
             system=system,
             messages=raw_messages,

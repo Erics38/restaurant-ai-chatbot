@@ -1,0 +1,377 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Tobi Restaurant AI Chatbot - single EC2 instance running the FastAPI app
+  in Docker, using AWS Bedrock for AI responses. No local model required.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PREREQUISITES (complete these before deploying):
+#
+#  1. Enable Bedrock model access in your AWS account:
+#     AWS Console → Amazon Bedrock → Model access → Request access for
+#     "Claude Sonnet" under Anthropic. Takes ~2 minutes.
+#
+#  2. Make sure the GHCR image is public:
+#     github.com → your repo → Packages → restaurant-ai-chatbot → visibility → Public
+#
+# COST ESTIMATE:
+#  Free tier (first 12 months on new accounts): ~$1–2/month (Bedrock only)
+#  After free tier: ~$10–12/month (EC2 t2.micro ~$8.47 + Bedrock ~$1.50)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Console UI grouping
+# ─────────────────────────────────────────────────────────────────────────────
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Restaurant Settings
+        Parameters:
+          - RestaurantName
+      - Label:
+          default: AWS Settings
+        Parameters:
+          - BedrockRegion
+          - BedrockModelId
+      - Label:
+          default: Optional
+        Parameters:
+          - KeyPairName
+    ParameterLabels:
+      RestaurantName:
+        default: Restaurant Name (shown to customers)
+      BedrockRegion:
+        default: Bedrock Region (must have Claude access)
+      BedrockModelId:
+        default: Bedrock Model ID
+      KeyPairName:
+        default: EC2 Key Pair (for SSH access - optional)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Parameters
+# ─────────────────────────────────────────────────────────────────────────────
+Parameters:
+
+  RestaurantName:
+    Type: String
+    Default: The Common House
+    Description: Name shown to customers in chat responses.
+    MinLength: 1
+    MaxLength: 100
+
+  BedrockRegion:
+    Type: String
+    Default: us-east-1
+    Description: >
+      AWS region where Bedrock is available. Claude is available in
+      us-east-1, us-west-2, eu-west-3, and ap-northeast-1.
+    AllowedValues:
+      - us-east-1
+      - us-west-2
+      - eu-west-3
+      - ap-northeast-1
+
+  BedrockModelId:
+    Type: String
+    Default: us.anthropic.claude-sonnet-4-5-20250929-v1:0
+    Description: >
+      Bedrock model ID. The default uses the cross-region inference profile
+      (us.*) for best availability. Change only if you need a specific model.
+
+  KeyPairName:
+    Type: String
+    Default: ''
+    Description: >
+      EC2 key pair name for SSH access. Leave blank if you do not need SSH.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Conditions
+# ─────────────────────────────────────────────────────────────────────────────
+Conditions:
+  HasKeyPair: !Not [!Equals [!Ref KeyPairName, '']]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resources
+# ─────────────────────────────────────────────────────────────────────────────
+Resources:
+
+  # ── Networking ─────────────────────────────────────────────────────────────
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet'
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref RouteTable
+
+  # ── Security Group ──────────────────────────────────────────────────────────
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Tobi chatbot - allow HTTP inbound, all outbound
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP - chat UI
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH - optional access
+      # Explicit outbound: allow HTTPS so Docker pull + Bedrock API calls work
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS - Docker image pull and Bedrock API
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP - package updates
+        - IpProtocol: udp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+          Description: DNS - required for domain resolution (ghcr.io, bedrock endpoints)
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg'
+
+  # ── IAM ─────────────────────────────────────────────────────────────────────
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BedrockInvoke
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                # Scoped to the exact Claude Sonnet model being used
+                Resource:
+                  - !Sub 'arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0'
+                  - !Sub 'arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-role'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  # ── EC2 Instance ────────────────────────────────────────────────────────────
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        # Wait up to 12 minutes for the app to start before marking stack complete
+        Timeout: PT12M
+    Properties:
+      InstanceType: t2.micro
+      # Amazon Linux 2023 - latest AMI resolved automatically per region
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+      IamInstanceProfile: !Ref InstanceProfile
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !Ref SecurityGroup
+      KeyName: !If [HasKeyPair, !Ref KeyPairName, !Ref 'AWS::NoValue']
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ec2'
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+
+          # ── Helper: signal CloudFormation on success or failure ──────────
+          signal_cfn() {
+            /opt/aws/bin/cfn-signal \
+              --exit-code $1 \
+              --stack '${AWS::StackName}' \
+              --resource EC2Instance \
+              --region '${AWS::Region}'
+          }
+
+          # If anything below fails, signal failure so CF marks stack as failed
+          trap 'signal_cfn 1' ERR
+
+          echo "=== [1/6] Updating system ==="
+          dnf update -y
+
+          echo "=== [2/6] Installing Docker ==="
+          dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+
+          # Wait until the Docker daemon socket is ready before running containers
+          echo "Waiting for Docker daemon..."
+          until docker ps > /dev/null 2>&1; do
+            sleep 2
+          done
+          echo "Docker is ready."
+
+          echo "=== [3/6] Preparing data directory ==="
+          mkdir -p /opt/tobi/data /opt/tobi/logs
+          # The container runs as appuser (UID 1000). Give it write access.
+          chown 1000:1000 /opt/tobi/data /opt/tobi/logs
+
+          echo "=== [4/6] Pulling Docker image ==="
+          docker pull ghcr.io/erics38/restaurant-ai-chatbot:latest
+
+          echo "=== [5/6] Starting Tobi container ==="
+          docker run -d \
+            --name tobi \
+            --restart unless-stopped \
+            -p 80:8000 \
+            -v /opt/tobi/data:/app/data \
+            -v /opt/tobi/logs:/app/logs \
+            --log-opt max-size=50m \
+            --log-opt max-file=3 \
+            -e "RESTAURANT_NAME=${RestaurantName}" \
+            -e AI_BACKEND=bedrock \
+            -e "AWS_REGION=${BedrockRegion}" \
+            -e "BEDROCK_MODEL_ID=${BedrockModelId}" \
+            -e ENVIRONMENT=production \
+            -e "ALLOWED_ORIGINS=*" \
+            ghcr.io/erics38/restaurant-ai-chatbot:latest || {
+            echo "ERROR: docker run failed"
+            signal_cfn 1
+            exit 1
+          }
+
+          echo "=== [6/6] Waiting for app to be healthy ==="
+          RETRIES=150
+          HEALTHY=0
+          for i in $(seq 1 $RETRIES); do
+            if python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)" > /dev/null 2>&1; then
+              echo "App is healthy."
+              HEALTHY=1
+              break
+            fi
+            echo "Attempt $i/$RETRIES: not ready yet, waiting 2s..."
+            sleep 2
+          done
+
+          if [ "$HEALTHY" -eq 0 ]; then
+            echo "ERROR: App did not become healthy in time."
+            docker logs tobi
+            signal_cfn 1
+            exit 1
+          fi
+
+          # ── Systemd unit so the container restarts on reboot ─────────────
+          cat > /etc/systemd/system/tobi.service << 'EOF'
+          [Unit]
+          Description=Tobi Restaurant AI
+          Requires=docker.service
+          After=docker.service
+
+          [Service]
+          Restart=always
+          ExecStart=/usr/bin/docker start -a tobi
+          ExecStop=/usr/bin/docker stop tobi
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable tobi
+
+          echo "=== Setup complete! ==="
+          signal_cfn 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Outputs
+# ─────────────────────────────────────────────────────────────────────────────
+Outputs:
+
+  ApplicationURL:
+    Description: Open this URL in your browser to use the chatbot
+    Value: !Sub 'http://${EC2Instance.PublicIp}'
+
+  PublicIP:
+    Description: EC2 public IP address
+    Value: !GetAtt EC2Instance.PublicIp
+
+  SSHCommand:
+    Description: SSH command (only useful if you provided a key pair)
+    Value: !Sub 'ssh ec2-user@${EC2Instance.PublicIp}'
