@@ -384,12 +384,23 @@
          *
          * Called once on page load before any API requests.
          */
+        function generateUUID() {
+            // crypto.randomUUID() requires HTTPS — fall back to Math.random on HTTP
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        }
+
         function initializeSession() {
             sessionId = localStorage.getItem('restaurantSessionId');
 
             if (!sessionId) {
                 // First visit (or after clearConversation()) — generate a new UUID
-                sessionId = crypto.randomUUID();
+                sessionId = generateUUID();
                 localStorage.setItem('restaurantSessionId', sessionId);
                 console.log('Created new session:', sessionId);
             } else {
