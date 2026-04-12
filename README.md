@@ -1,261 +1,267 @@
-# Restaurant AI — The Common House
+# Tobi — Restaurant AI Chatbot
 
-A local AI-powered restaurant ordering system. Tobi, the chatbot, knows the full menu and handles order management. Built with FastAPI and a local Llama-3-8B model.
+An AI-powered restaurant chatbot you can deploy in minutes. Tobi knows your menu, handles customer questions, and connects to your choice of AI backend — AWS Bedrock, a local model, or your own custom endpoint.
 
+[![Docker Build](https://github.com/Erics38/restaurant-ai-chatbot/actions/workflows/docker.yml/badge.svg)](https://github.com/Erics38/restaurant-ai-chatbot/actions/workflows/docker.yml)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.118+-green.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI Status](https://github.com/Erics38/restaurant-ai-chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/Erics38/restaurant-ai-chatbot/actions/workflows/ci.yml)
-[![Docker Build](https://github.com/Erics38/restaurant-ai-chatbot/actions/workflows/docker.yml/badge.svg)](https://github.com/Erics38/restaurant-ai-chatbot/actions/workflows/docker.yml)
 
 ---
 
-## Relevance to SaaS & Technical Roles
+## What it does
 
-This project demonstrates patterns used in modern SaaS platforms. Solutions Engineers and Onboarding Specialists work with these daily:
-
-- **Conversational AI integration** — Intercom, Drift, and Help Scout use similar chatbot flows for customer onboarding
-- **Self-documented REST API** — Swagger and ReDoc enable enterprise customers to integrate without hand-holding
-- **Environment-based configuration** — Multi-tenant SaaS applications use `.env` files for deployment flexibility
-- **Docker containerization** — Technical teams guide customers through containerized deployments and upgrades
-- **CI/CD pipeline** — Software delivery automation runs behind every SaaS product
-
----
-
-## Features
-
-- **Menu-Aware Chatbot** — Tobi knows food categories, ingredients, and can recommend items
-- **Local AI Model** — Llama-3-8B runs locally for natural language understanding (2-10s response time)
-- **Template Fallback** — Instant responses (<10ms) when AI is unavailable or disabled
-- **Full Menu System** — Starters, mains, desserts, and drinks
-- **Order Management** — Track orders using presidential birth year order numbers
-- **Magic Password** — VIP treatment for customers who say "i'm on yelp"
-- **SQLite Database** — Persistent order storage
-- **Production Ready** — Logging, health checks, and error handling
-- **Docker Support** — One-command deployment
-- **Environment Configuration** — Configure via `.env` files
-- **Zero API Costs** — No external dependencies or API fees
+- **Menu-aware chat** — Tobi knows every item, price, and ingredient and can make recommendations
+- **Three AI backends** — AWS Bedrock (Claude), local Llama model, or your own custom endpoint
+- **Bring your own menu** — point to a JSON URL and Tobi adopts your restaurant's menu instantly
+- **Bring your own model** — connect any OpenAI-compatible or custom model via a single endpoint
+- **Template fallback** — if AI is unavailable, Tobi answers instantly from keyword templates
+- **Persistent sessions** — conversation history stored in SQLite across page refreshes
+- **One-command AWS deploy** — CloudFormation template spins up everything automatically
 
 ---
 
-## Infrastructure Architecture
+## Deploy to AWS in 5 minutes
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         User's Browser                          │
-│                  http://localhost:8000/static/                  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTP/WebSocket
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Restaurant AI (FastAPI)                      │
-│                         Port 8000                               │
-├─────────────────────────────────────────────────────────────────┤
-│  Endpoints:                                                     │
-│  • GET  /                    - Root/Health                      │
-│  • GET  /menu                - Menu data                        │
-│  • POST /chat                - Chat with Tobi                   │
-│  • POST /order               - Create order                     │
-│  • GET  /order/{id}          - Get order status                 │
-└────────────┬───────────────────────────────┬────────────────────┘
-             │                               │
-             ▼                               ▼
-┌──────────────────────┐    ┌────────────────────────────────────┐
-│   SQLite Database    │    │   llama-server (Optional)          │
-│   (data/orders.db)   │    │   Port 8080                        │
-└──────────────────────┘    └────────────────────────────────────┘
-```
+The fastest way to get Tobi running is the CloudFormation template. It creates a VPC, EC2 instance, IAM role, and starts the Docker container automatically.
 
----
+### Prerequisites
 
-## Quick Start
+1. **Enable Bedrock model access** in your AWS account:
+   AWS Console → Amazon Bedrock → Model access → Request access for Claude Sonnet (takes ~2 minutes)
 
-**Prerequisites:** Docker and 4.92 GB of disk space for the Llama-3-8B model
+2. **AWS CLI configured** with your credentials
 
-### Step 1: Download Model (one-time setup)
+### Deploy
 
 ```bash
-mkdir -p models
-curl -L -o models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf \
-  https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf
+aws cloudformation deploy \
+  --template-file cloudformation/tobi-chatbot.yml \
+  --stack-name tobi-chatbot \
+  --capabilities CAPABILITY_IAM \
+  --region us-east-1
 ```
 
-### Step 2: Start with Docker
+When it completes (~5 minutes), get your URL:
 
 ```bash
-# Windows:
-start.bat
-
-# macOS/Linux:
-chmod +x start.sh && ./start.sh
-
-# Or manually:
-docker-compose up --build -d
+aws cloudformation describe-stacks \
+  --stack-name tobi-chatbot \
+  --query 'Stacks[0].Outputs' \
+  --output table
 ```
 
-**Access:** http://localhost:8000/static/restaurant_chat.html
+Open the `ApplicationURL` in your browser — Tobi is live.
 
-### Optional: Fast Template Mode (No AI)
+### CloudFormation parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `RestaurantName` | The Common House | Name shown in chat responses |
+| `BedrockRegion` | us-east-1 | AWS region with Claude access |
+| `BedrockModelId` | Claude Sonnet 4.5 | Bedrock model to use |
+| `MenuUrl` | _(blank)_ | URL of your custom menu JSON — leave blank for the built-in menu |
+| `CustomBackendUrl` | _(blank)_ | URL of your own AI endpoint — leave blank to use Bedrock |
+
+To deploy with a custom menu and/or custom model:
 
 ```bash
-USE_LOCAL_AI=false docker-compose up -d
+aws cloudformation deploy \
+  --template-file cloudformation/tobi-chatbot.yml \
+  --stack-name tobi-chatbot \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides \
+      RestaurantName="Joes Diner" \
+      MenuUrl="https://example.com/menu.json" \
+      CustomBackendUrl="http://my-model-server/chat"
 ```
 
 ---
 
-## Project Structure
+## Plug in your own menu
 
+Create a public JSON file (GitHub Gist works great) with this structure:
+
+```json
+{
+  "restaurant_name": "Joes Diner",
+  "starters": [
+    {"name": "Chicken Wings", "description": "Buffalo sauce, ranch dip", "price": 12.00}
+  ],
+  "mains": [
+    {"name": "Classic Burger", "description": "Beef patty, cheddar, lettuce, tomato", "price": 15.00}
+  ],
+  "desserts": [
+    {"name": "Cheesecake", "description": "New York style, berry compote", "price": 8.00}
+  ],
+  "drinks": [
+    {"name": "Craft Beer", "description": "Ask your server for today's selection", "price": 7.00}
+  ]
+}
 ```
-restaurant-ai/
-├── app/
-│   ├── main.py          # FastAPI application & endpoints
-│   ├── config.py        # Environment-based configuration
-│   ├── models.py        # Pydantic models for validation
-│   ├── database.py      # SQLite database operations
-│   ├── tobi_ai.py       # AI chatbot logic (menu-aware)
-│   └── menu_data.py     # Restaurant menu data
-├── static/
-│   └── restaurant_chat.html  # Web interface
-├── tests/               # Unit tests
-├── .env.example         # Environment variable template
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
-```
+
+Pass the raw URL as `MenuUrl` when deploying. Tobi loads the menu at startup and falls back to the built-in Common House menu if the URL is unreachable.
 
 ---
 
-## Configuration
+## Plug in your own model
 
-Copy `.env.example` to `.env` and update as needed:
+Any model or container that can accept a POST request works. Your endpoint receives:
+
+```json
+{
+  "message": "what burgers do you have?",
+  "session_id": "abc-123",
+  "history": [
+    {"role": "user", "content": "hi"},
+    {"role": "assistant", "content": "Hey! Welcome to Joes Diner!"}
+  ]
+}
+```
+
+And must return:
+
+```json
+{
+  "response": "We have the Classic Burger for $15 — beef patty, cheddar, lettuce, and tomato. Want to add it to your order?"
+}
+```
+
+Pass your endpoint URL as `CustomBackendUrl` when deploying. Tobi automatically sets `AI_BACKEND=custom` and routes all chat through your endpoint, falling back to keyword templates if your server is unreachable.
+
+### Testing locally with a custom model
+
+Run Tobi locally with Docker and point it at your local model server:
 
 ```bash
-HOST=0.0.0.0
-PORT=8000
-ENVIRONMENT=development
-DATABASE_URL=sqlite:///./data/orders.db
-RESTAURANT_NAME=The Common House
-ENABLE_MAGIC_PASSWORD=True
-MAGIC_PASSWORD=i'm on yelp
-SECRET_KEY=your-secret-key-here
-LOG_LEVEL=INFO
+docker run -d \
+  --name tobi \
+  -p 8000:8000 \
+  -e AI_BACKEND=custom \
+  -e CUSTOM_BACKEND_URL=http://host.docker.internal:11434/chat \
+  -e RESTAURANT_NAME="My Restaurant" \
+  ghcr.io/erics38/restaurant-ai-chatbot:latest
 ```
+
+Open http://localhost:8000 to test.
 
 ---
 
-## API Endpoints
+## Run locally (no AWS)
+
+```bash
+# Clone
+git clone https://github.com/Erics38/restaurant-ai-chatbot.git
+cd restaurant-ai-chatbot
+
+# Start with Docker (uses template fallback — no AI needed)
+docker-compose up -d
+
+# Or run directly
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Open http://localhost:8000
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `RESTAURANT_NAME` | The Common House | Restaurant name shown in responses |
+| `AI_BACKEND` | template | `template` / `bedrock` / `custom` |
+| `CUSTOM_BACKEND_URL` | _(blank)_ | Your model endpoint URL |
+| `MENU_URL` | _(blank)_ | Your menu JSON URL |
+| `AWS_REGION` | us-east-1 | Bedrock region |
+| `BEDROCK_MODEL_ID` | Claude Sonnet 4.5 | Bedrock model ID |
+| `ENVIRONMENT` | development | `development` / `production` |
+| `ALLOWED_ORIGINS` | * | CORS origins |
+
+---
+
+## AI Backends
+
+| Backend | How to activate | Best for |
+|---|---|---|
+| **Template** | `AI_BACKEND=template` | Fast demos, no AI needed |
+| **Bedrock** | `AI_BACKEND=bedrock` (default on AWS) | Production — Claude via AWS |
+| **Llama (local)** | `AI_BACKEND=llama` + `LLAMA_SERVER_URL` | Self-hosted open source model |
+| **Custom** | `AI_BACKEND=custom` + `CUSTOM_BACKEND_URL` | Your own model or container |
+
+All backends fall back to template responses automatically if unavailable.
+
+---
+
+## API
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/` | Root endpoint with basic info |
-| `GET`  | `/health` | Health check for monitoring |
-| `GET`  | `/menu` | Get full restaurant menu |
-| `POST` | `/chat` | Chat with Tobi AI |
-| `POST` | `/order` | Create a new order |
-| `GET`  | `/order/{order_number}` | Get order details |
+|---|---|---|
+| `GET` | `/` | Root — serves the chat UI |
+| `GET` | `/health` | Health check |
+| `GET` | `/menu` | Full menu as JSON |
+| `POST` | `/chat` | Send a message to Tobi |
+| `GET` | `/chat/history/{session_id}` | Conversation history |
 
-- **Swagger UI:** http://localhost:8000/api/docs
-- **ReDoc:** http://localhost:8000/api/redoc
+**Swagger UI:** http://localhost:8000/api/docs (development mode only)
 
----
-
-## Chat Examples
+### Chat request
 
 ```bash
-# Ask about menu items
 curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "What burgers do you have?"}'
+  -d '{"message": "what burgers do you have?"}'
+```
 
-# Get a recommendation
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What do you recommend?"}'
+```json
+{
+  "response": "Oh dude, the House Smash Burger is gnarly! Double patty, cheddar, caramelized onion — $16. Want me to add it?",
+  "session_id": "abc-123",
+  "restaurant": "The Common House"
+}
 ```
 
 ---
 
-## Testing
+## Project structure
 
-```bash
-pytest
-black app/
-flake8 app/
-mypy app/
 ```
-
----
-
-## Docker Commands
-
-```bash
-docker-compose up --build    # Build and start
-docker-compose up -d         # Run in background
-docker-compose logs -f app   # View logs
-docker-compose down          # Stop
+restaurant-ai-chatbot/
+├── app/
+│   ├── main.py           # FastAPI app and endpoints
+│   ├── config.py         # All configuration via env vars
+│   ├── tobi_ai.py        # AI backends and dispatcher
+│   ├── menu_data.py      # Menu loader (built-in + MENU_URL)
+│   ├── prompts.py        # System prompts for AI backends
+│   ├── models.py         # Pydantic and SQLAlchemy models
+│   └── database.py       # SQLite session management
+├── static/
+│   └── restaurant_chat.html  # Chat UI
+├── cloudformation/
+│   └── tobi-chatbot.yml  # AWS CloudFormation template
+├── tests/
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
 ```
 
 ---
 
 ## Documentation
 
-- **[SETUP.md](SETUP.md)** — Complete setup guide for new users
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** — Production deployment guide
-- **[CICD.md](CICD.md)** — CI/CD pipeline documentation
-- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** — Upgrading from previous versions
-- **[DOCKER_QUICK_START.md](DOCKER_QUICK_START.md)** — Fast Docker reference
+- [DEPLOYMENT.md](DEPLOYMENT.md) — Full deployment guide including AWS CloudFormation
+- [ARCHITECTURE.md](ARCHITECTURE.md) — How the backends and dispatcher work
+- [BEDROCK_INTEGRATION.md](BEDROCK_INTEGRATION.md) — AWS Bedrock setup details
 
 ---
 
 ## Contributing
 
-We welcome contributions! The project uses GitHub Actions for CI/CD to ensure code quality.
-
-### Quick Start for Contributors
-
-1. **Fork and clone** the repository
-2. **Install dependencies**: `pip install -r requirements.txt`
-3. **Install dev tools**: `pip install pytest pytest-asyncio black flake8 mypy`
-4. **Run verification**: `./scripts/verify-ci-locally.sh` (or `.bat` on Windows)
-5. **Make your changes** with tests
-6. **Submit a pull request**
-
-### CI/CD Pipeline
-
-Every push and pull request automatically runs:
-- ✅ Black (code formatting)
-- ✅ Flake8 (linting)
-- ✅ MyPy (type checking)
-- ✅ Pytest (unit tests on Python 3.10, 3.11, 3.12)
-- ✅ Security scans (CodeQL, Bandit)
-- ✅ Docker builds
-
-**View CI status**: [Actions tab](https://github.com/Erics38/restaurant-ai-chatbot/actions)
-
-### Before Submitting
-
-Run checks locally to catch issues early:
-
-```bash
-# All-in-one verification script
-./scripts/verify-ci-locally.sh
-
-# Or run individually
-black app/ tests/ --line-length=120
-flake8 app/ tests/ --max-line-length=120 --extend-ignore=E203,W503
-mypy app/ --ignore-missing-imports
-pytest tests/ -v
-```
-
-See [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CICD_SETUP.md](CICD_SETUP.md) for detailed documentation.
+1. Fork and clone the repository
+2. `pip install -r requirements.txt`
+3. `pip install pytest black flake8`
+4. Make your changes and run `pytest tests/test_main.py tests/test_models.py tests/test_tobi_ai.py`
+5. Open a pull request
 
 ---
 
-## Support
-
-- **Issues:** https://github.com/Erics38/restaurant-ai-chatbot/issues
-- **API Docs:** http://localhost:8000/api/docs (when running locally)
-
----
-
-Built with FastAPI and Python.
+Built with FastAPI, Docker, and AWS Bedrock.
