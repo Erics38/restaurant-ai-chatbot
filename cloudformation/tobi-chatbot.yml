@@ -33,6 +33,11 @@ Metadata:
         Parameters:
           - BedrockRegion
           - BedrockModelId
+      - Label:
+          default: Custom Integrations (optional)
+        Parameters:
+          - MenuUrl
+          - CustomBackendUrl
     ParameterLabels:
       RestaurantName:
         default: Restaurant Name (shown to customers)
@@ -40,6 +45,10 @@ Metadata:
         default: Bedrock Region (must have Claude access)
       BedrockModelId:
         default: Bedrock Model ID
+      MenuUrl:
+        default: Custom Menu URL (optional)
+      CustomBackendUrl:
+        default: Custom AI Backend URL (optional)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Parameters
@@ -71,6 +80,22 @@ Parameters:
     Description: >
       Bedrock model ID. The default uses the cross-region inference profile
       (us.*) for best availability. Change only if you need a specific model.
+
+  MenuUrl:
+    Type: String
+    Default: ''
+    Description: >
+      URL of a publicly accessible JSON file containing your menu.
+      Leave blank to use the built-in Common House menu.
+      Expected format: { "restaurant_name": "...", "starters": [...], "mains": [...], "desserts": [...], "drinks": [...] }
+
+  CustomBackendUrl:
+    Type: String
+    Default: ''
+    Description: >
+      URL of your own AI backend endpoint. When set, also set AI Backend to "custom".
+      Your endpoint must accept POST { "message": str, "session_id": str, "history": [...] }
+      and return { "response": str }. Leave blank to use Bedrock.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Conditions
@@ -278,6 +303,15 @@ Resources:
           docker pull ghcr.io/erics38/restaurant-ai-chatbot:latest
 
           echo "=== [5/6] Starting Tobi container ==="
+
+          # Determine AI backend: use "custom" if a custom URL was provided, else "bedrock"
+          CUSTOM_URL="${CustomBackendUrl}"
+          if [ -n "$CUSTOM_URL" ]; then
+            AI_BACKEND_VALUE="custom"
+          else
+            AI_BACKEND_VALUE="bedrock"
+          fi
+
           docker run -d \
             --name tobi \
             --restart unless-stopped \
@@ -287,9 +321,11 @@ Resources:
             --log-opt max-size=50m \
             --log-opt max-file=3 \
             -e "RESTAURANT_NAME=${RestaurantName}" \
-            -e AI_BACKEND=bedrock \
+            -e "AI_BACKEND=$AI_BACKEND_VALUE" \
             -e "AWS_REGION=${BedrockRegion}" \
             -e "BEDROCK_MODEL_ID=${BedrockModelId}" \
+            -e "MENU_URL=${MenuUrl}" \
+            -e "CUSTOM_BACKEND_URL=${CustomBackendUrl}" \
             -e ENVIRONMENT=production \
             -e "ALLOWED_ORIGINS=*" \
             ghcr.io/erics38/restaurant-ai-chatbot:latest || {

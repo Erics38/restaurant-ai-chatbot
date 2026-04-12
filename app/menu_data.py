@@ -1,24 +1,29 @@
 """
-The Common House menu data.
+Menu data loader.
 
-This is the single source of truth for every menu item in the application.
-It is used in three places:
-  1. GET /menu endpoint  — returns this dict to the frontend for rendering the
-                           menu modal.
-  2. app/prompts.py      — injects the full menu into the Llama-3 system prompt
-                           so the AI knows what to recommend and what prices to quote.
-  3. app/tobi_ai.py      — the template fallback searches this dict to find items
-                           that match a user's query (e.g. "do you have salmon?").
+On startup, get_menu() is called once and the result is cached in MENU_DATA.
 
-To add a new item: append a dict with "name", "description", and "price" to the
-relevant category list.  No other code needs to change — prompts and search pick
-it up automatically.
+Two sources are supported:
+  1. MENU_URL env var — fetch JSON from a public URL (custom restaurant menu)
+  2. Built-in default  — The Common House menu defined at the bottom of this file
 
-To add a new category: add a new key here and update the category loops in
-prompts.py and tobi_ai.py to include it.
+Expected JSON structure for a custom menu:
+  {
+    "restaurant_name": "My Restaurant",
+    "starters":  [{"name": "...", "description": "...", "price": 0.00}, ...],
+    "mains":     [...],
+    "desserts":  [...],
+    "drinks":    [...]
+  }
+
+Any categories present in the JSON will be displayed. Missing categories are
+ignored. Extra fields are passed through to the frontend unchanged.
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # MENU_DATA
@@ -37,7 +42,7 @@ from typing import Any
 # Prices are in USD.
 # ---------------------------------------------------------------------------
 
-MENU_DATA: dict[str, Any] = {
+_DEFAULT_MENU: dict[str, Any] = {
     "restaurant_name": "The Common House",
 
     # -----------------------------------------------------------------------
@@ -88,3 +93,31 @@ MENU_DATA: dict[str, Any] = {
         {"name": "Whiskey Sour",     "description": "Bourbon, lemon, egg white",               "price": 12.00},
     ],
 }
+
+
+def _load_menu() -> dict[str, Any]:
+    """
+    Return the menu to use for this deployment.
+
+    If MENU_URL is set, fetch JSON from that URL and return it.
+    Falls back to the built-in default menu on any error.
+    """
+    from app.config import settings
+    if not settings.menu_url:
+        return _DEFAULT_MENU
+
+    try:
+        import urllib.request
+        import json
+        logger.info(f"Loading custom menu from {settings.menu_url}")
+        with urllib.request.urlopen(settings.menu_url, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        logger.info(f"Custom menu loaded: {list(data.keys())}")
+        return data
+    except Exception as e:
+        logger.error(f"Failed to load menu from {settings.menu_url}: {e} — using default menu")
+        return _DEFAULT_MENU
+
+
+# Single shared instance — loaded once at startup
+MENU_DATA: dict[str, Any] = _load_menu()

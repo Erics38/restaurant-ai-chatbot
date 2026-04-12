@@ -61,6 +61,24 @@ class Settings(BaseSettings):
     ai_backend: str = "template"
 
     # ------------------------------------------------------------------
+    # Custom menu (optional)
+    # ------------------------------------------------------------------
+    # Point this at a publicly accessible JSON URL that matches the menu
+    # structure (see app/menu_data.py for the expected format).
+    # If blank the built-in Common House menu is used.
+    menu_url: Optional[str] = None
+
+    # ------------------------------------------------------------------
+    # Custom AI backend (optional)
+    # ------------------------------------------------------------------
+    # URL of an external endpoint that accepts POST requests with:
+    #   { "message": str, "session_id": str, "history": [...] }
+    # and returns:
+    #   { "response": str }
+    # Set ai_backend=custom to activate it.
+    custom_backend_url: Optional[str] = None
+
+    # ------------------------------------------------------------------
     # AWS Bedrock settings (only used when ai_backend == "bedrock")
     # ------------------------------------------------------------------
     aws_region: str = "us-east-1"

@@ -576,6 +576,67 @@ async def get_bedrock_response_with_context(prompt: str, session_id: str, db) ->
 
 
 # ---------------------------------------------------------------------------
+# Mode 5 — Custom external backend
+# ---------------------------------------------------------------------------
+
+async def get_custom_backend_response(prompt: str, session_id: str, db) -> str:
+    """
+    Forward the chat request to a user-supplied external endpoint.
+
+    The endpoint must accept POST requests with JSON body:
+        { "message": str, "session_id": str, "history": [...] }
+
+    And return JSON:
+        { "response": str }
+
+    Set CUSTOM_BACKEND_URL env var to activate. Falls back to template on any error.
+    """
+    from app.models import DBMessage
+
+    if not settings.custom_backend_url:
+        logger.error("Custom backend selected but CUSTOM_BACKEND_URL is not set — falling back to template")
+        return get_tobi_response(prompt)
+
+    history = (
+        db.query(DBMessage)
+        .filter(DBMessage.session_id == session_id)
+        .order_by(DBMessage.timestamp.desc())
+        .limit(10)
+        .all()
+    )
+
+    payload = {
+        "message": prompt,
+        "session_id": session_id,
+        "history": [
+            {"role": msg.role, "content": msg.content}
+            for msg in reversed(history)
+        ],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(settings.custom_backend_url, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            response_text = data.get("response", "").strip()
+
+        if not response_text:
+            logger.warning("Custom backend returned empty response — falling back to template")
+            return get_tobi_response(prompt)
+
+        logger.info(f"Custom backend response: {response_text[:80]}")
+        return response_text
+
+    except httpx.TimeoutException:
+        logger.error(f"Custom backend timed out after 60s — falling back to template")
+        return get_tobi_response(prompt)
+    except Exception as e:
+        logger.error(f"Custom backend error: {type(e).__name__}: {e} — falling back to template")
+        return get_tobi_response(prompt)
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher — routes each request to the correct backend
 # ---------------------------------------------------------------------------
 
@@ -605,6 +666,10 @@ async def get_response_with_context(
     if backend == "llama":
         logger.info("Dispatcher: routing to Llama")
         return await get_ai_response_with_context(prompt, session_id, db)
+
+    if backend == "custom":
+        logger.info("Dispatcher: routing to custom backend")
+        return await get_custom_backend_response(prompt, session_id, db)
 
     if backend != "template":
         logger.warning(f"Dispatcher: unknown backend '{backend}', falling back to template")
