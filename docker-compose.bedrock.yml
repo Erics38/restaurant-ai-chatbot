@@ -1,0 +1,75 @@
+# =============================================================================
+# AWS Bedrock Compose Override
+#
+# Switches the app from local Llama-3 to AWS Bedrock Claude.
+# No GPU, no 4.9 GB model file, no 15-minute cold start.
+#
+# USAGE:
+#   docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build
+#
+# WHAT THIS OVERRIDE DOES:
+#   - Sets AI_BACKEND=bedrock so the app calls AWS Bedrock instead of llama-server
+#   - Clears depends_on so the app does NOT wait for llama-server (which won't start)
+#   - Reduces memory limits from 9 GB to 512 MB (no model in RAM)
+#   - Mounts ~/.aws for local development credential discovery
+#
+# CREDENTIALS — NEVER embed AWS keys in this file.
+#
+#   Production (EC2):
+#     Attach an IAM role to your EC2 instance with bedrock:InvokeModel permission.
+#     boto3 automatically discovers credentials from the instance metadata service.
+#     No environment variables, no files, no secrets to rotate.
+#
+#   Local development:
+#     Option A (recommended): Configure ~/.aws/credentials via `aws configure`
+#       The ~/.aws volume mount below makes them available inside the container.
+#     Option B: Pass credentials in your shell before running docker compose:
+#       AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... docker compose -f ... up
+#     Option C: Use a Bedrock API key (AWS Console → Bedrock → API keys, 12h expiry)
+#       export AWS_ACCESS_KEY_ID=<bedrock-api-key-id>
+#       export AWS_SECRET_ACCESS_KEY=<bedrock-api-key-secret>
+#
+# See BEDROCK_INTEGRATION.md for full setup instructions.
+# =============================================================================
+
+services:
+  app:
+    environment:
+      # Switch to Bedrock backend
+      - AI_BACKEND=bedrock
+      # Disable llama-server fallback to prevent confusing log warnings
+      - USE_LOCAL_AI=false
+      - LLAMA_SERVER_URL=
+
+      # AWS settings — values come from shell env or .env file
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
+
+      # DO NOT add AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY here.
+      # Pass them via shell env or use an IAM role on EC2 — see header above.
+
+    # IMPORTANT: must be `{}` (empty mapping) — not just omitted.
+    # If omitted, Compose inherits the base file's:
+    #   depends_on: { llama-server: { condition: service_healthy } }
+    # which blocks forever because llama-server never starts in this mode.
+    depends_on: {}
+
+    volumes:
+      # Inherit base volumes (data, logs, app hot-reload) plus:
+      # Mount local AWS credentials for boto3 discovery (local dev only).
+      # On EC2, the IAM instance role takes precedence — this mount is harmless
+      # but unnecessary and can be removed from production deployments.
+      - ~/.aws:/root/.aws:ro
+
+    deploy:
+      resources:
+        limits:
+          memory: 512M   # App itself uses ~100 MB — no model loaded into RAM
+          cpus: '1.0'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+# NOTE: The llama-server service is intentionally absent from this file.
+# Docker Compose merge rules mean only the `app` service is modified;
+# llama-server is simply not started when this override is used.
