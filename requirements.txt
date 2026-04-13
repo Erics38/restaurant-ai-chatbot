@@ -16,7 +16,7 @@ python-dotenv==1.0.1
 httpx==0.28.1
 
 # ===== Database =====
-sqlalchemy==2.0.25
+sqlalchemy==2.0.49
 
 # ===== AI Model (Optional - for real llama.cpp integration) =====
 # llama-cpp-python==0.3.16  # Requires C++ compiler on Windows
